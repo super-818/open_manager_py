@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开源资源管理器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>开源资源管理器</h1>
+            <div class="header-actions">
+                <button id="scanBtn" class="btn btn-primary">扫描目录</button>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="skills">技能管理</button>
+            <button class="tab-btn" data-tab="projects">项目管理</button>
+        </nav>
+
+        <main class="content">
+            <div id="skills-tab" class="tab-content active">
+                <div class="toolbar">
+                    <input type="text" id="skillSearch" placeholder="搜索技能..." class="search-input">
+                    <select id="skillCategory" class="select-input">
+                        <option value="">全部分类</option>
+                    </select>
+                    <button id="distributeSkillsBtn" class="btn btn-secondary">分发技能</button>
+                </div>
+                <div id="skillsList" class="resource-list"></div>
+            </div>
+
+            <div id="projects-tab" class="tab-content">
+                <div class="toolbar">
+                    <input type="text" id="projectSearch" placeholder="搜索项目..." class="search-input">
+                    <select id="projectCategory" class="select-input">
+                        <option value="">全部分类</option>
+                    </select>
+                    <button id="exportPathsBtn" class="btn btn-secondary">导出路径</button>
+                    <button id="updateAllBtn" class="btn btn-primary">一键更新</button>
+                </div>
+                <div id="projectsList" class="resource-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">编辑资源</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editCategory">分类</label>
+                    <input type="text" id="editCategory" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="editTags">标签（用逗号分隔）</label>
+                    <input type="text" id="editTags" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="editNotes">备注</label>
+                    <textarea id="editNotes" class="form-textarea" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelBtn" class="btn btn-secondary">取消</button>
+                <button id="saveBtn" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="distributeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>分发技能</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>选择目标工具</label>
+                    <div class="tool-options">
+                        <label class="tool-option">
+                            <input type="checkbox" name="tool" value="trae">
+                            <span>Trae</span>
+                        </label>
+                        <label class="tool-option">
+                            <input type="checkbox" name="tool" value="claude-code">
+                            <span>Claude Code</span>
+                        </label>
+                        <label class="tool-option">
+                            <input type="checkbox" name="tool" value="openclaw">
+                            <span>OpenClaw</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="customPath">自定义路径（可选）</label>
+                    <input type="text" id="customPath" class="form-input" placeholder="输入自定义.skill目录路径">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelDistributeBtn" class="btn btn-secondary">取消</button>
+                <button id="confirmDistributeBtn" class="btn btn-primary">确认分发</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
