@@ -111,6 +111,29 @@
 
     <div id="toast" class="toast"></div>
 
+    <div id="progressModal" class="modal">
+        <div class="modal-content progress-modal">
+            <div class="modal-header">
+                <h2 id="progressTitle">更新项目</h2>
+                <button class="close-btn" id="closeProgressBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="progress-container">
+                    <div class="progress-title" id="progressSubtitle">准备更新...</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progressBar" style="width: 0%;">
+                            <span class="progress-bar-text" id="progressBarText">0%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress-details" id="progressDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="closeProgressModalBtn" class="btn btn-secondary" style="display: none;">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

@@ -2,11 +2,13 @@ let currentSkills = [];
 let currentProjects = [];
 let currentEditResource = null;
 let currentEditType = null;
+let isUpdating = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     initTabs();
     initButtons();
     initModal();
+    initProgressModal();
     loadSkills();
     loadProjects();
 });
@@ -330,25 +332,6 @@ async function exportPaths() {
     }
 }
 
-async function updateAllProjects() {
-    if (!confirm('确定要更新所有项目吗？这可能需要一些时间。')) return;
-    
-    try {
-        const response = await fetch('/api/projects/update-all', { method: 'POST' });
-        const data = await response.json();
-        
-        if (data.success) {
-            showToast(`更新完成！成功更新 ${data.updated_count} 个项目`, 'success');
-            await loadProjects();
-        } else {
-            showToast(data.error || '更新失败', 'error');
-        }
-    } catch (error) {
-        showToast('更新失败', 'error');
-        console.error(error);
-    }
-}
-
 function updateCategorySelect(selectId, resources) {
     const select = document.getElementById(selectId);
     const categories = [...new Set(resources.map(r => r.category).filter(c => c))];
@@ -529,4 +512,170 @@ function showToast(message, type = 'success') {
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
+}
+
+function initProgressModal() {
+    const closeBtn = document.getElementById('closeProgressBtn');
+    const closeModalBtn = document.getElementById('closeProgressModalBtn');
+    
+    closeBtn.addEventListener('click', closeProgressModal);
+    closeModalBtn.addEventListener('click', closeProgressModal);
+    
+    const progressModal = document.getElementById('progressModal');
+    progressModal.addEventListener('click', function(e) {
+        if (e.target === progressModal && !isUpdating) {
+            closeProgressModal();
+        }
+    });
+}
+
+function showProgressModal(title) {
+    document.getElementById('progressTitle').textContent = title;
+    document.getElementById('progressSubtitle').textContent = '准备中...';
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('progressBarText').textContent = '0%';
+    document.getElementById('progressDetails').innerHTML = '';
+    document.getElementById('closeProgressModalBtn').style.display = 'none';
+    document.getElementById('progressModal').classList.add('show');
+    isUpdating = true;
+}
+
+function closeProgressModal() {
+    if (isUpdating) return;
+    document.getElementById('progressModal').classList.remove('show');
+}
+
+function updateProgress(current, total, subtitle) {
+    const percent = Math.round((current / total) * 100);
+    document.getElementById('progressBar').style.width = percent + '%';
+    document.getElementById('progressBarText').textContent = percent + '%';
+    document.getElementById('progressSubtitle').textContent = subtitle;
+}
+
+function addProgressDetail(name, status) {
+    const details = document.getElementById('progressDetails');
+    const item = document.createElement('div');
+    item.className = 'progress-item ' + status;
+    let statusText = '';
+    switch(status) {
+        case 'pending':
+            statusText = '⏳ 等待中';
+            break;
+        case 'updating':
+            statusText = '🔄 更新中';
+            break;
+        case 'success':
+            statusText = '✅ 成功';
+            break;
+        case 'error':
+            statusText = '❌ 失败';
+            break;
+    }
+    item.textContent = `${name} - ${statusText}`;
+    details.appendChild(item);
+    details.scrollTop = details.scrollHeight;
+}
+
+async function updateResource(type, id) {
+    if (type !== 'project') {
+        showToast('只有项目可以更新', 'error');
+        return;
+    }
+    
+    const project = currentProjects.find(p => p.id === id);
+    if (!project) return;
+    
+    showProgressModal('更新项目');
+    
+    addProgressDetail(project.name, 'updating');
+    updateProgress(0, 1, `正在更新: ${project.name}`);
+    
+    try {
+        const response = await fetch(`/api/${type}/${id}/update`, { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            addProgressDetail(project.name, 'success');
+            updateProgress(1, 1, '更新完成');
+            showToast('更新成功', 'success');
+            await loadSkills();
+            await loadProjects();
+        } else {
+            addProgressDetail(project.name, 'error');
+            updateProgress(1, 1, '更新失败');
+            showToast(data.error || '更新失败', 'error');
+        }
+    } catch (error) {
+        addProgressDetail(project.name, 'error');
+        updateProgress(1, 1, '更新失败');
+        showToast('更新失败', 'error');
+        console.error(error);
+    }
+    
+    isUpdating = false;
+    document.getElementById('closeProgressModalBtn').style.display = 'block';
+}
+
+async function updateAllProjects() {
+    if (!confirm('确定要更新所有项目吗？这可能需要一些时间。')) return;
+    if (currentProjects.length === 0) {
+        showToast('没有可更新的项目', 'error');
+        return;
+    }
+    
+    showProgressModal('批量更新项目');
+    
+    currentProjects.forEach(project => {
+        addProgressDetail(project.name, 'pending');
+    });
+    
+    let updatedCount = 0;
+    let failedCount = 0;
+    
+    for (let i = 0; i < currentProjects.length; i++) {
+        const project = currentProjects[i];
+        
+        updateProgress(i, currentProjects.length, `正在更新: ${project.name}`);
+        
+        const details = document.getElementById('progressDetails');
+        const items = details.querySelectorAll('.progress-item');
+        if (items[i]) {
+            items[i].className = 'progress-item updating';
+            items[i].textContent = `${project.name} - 🔄 更新中`;
+        }
+        
+        try {
+            const response = await fetch(`/api/project/${project.id}/update`, { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                updatedCount++;
+                if (items[i]) {
+                    items[i].className = 'progress-item success';
+                    items[i].textContent = `${project.name} - ✅ 成功`;
+                }
+            } else {
+                failedCount++;
+                if (items[i]) {
+                    items[i].className = 'progress-item error';
+                    items[i].textContent = `${project.name} - ❌ 失败: ${data.error || '未知错误'}`;
+                }
+            }
+        } catch (error) {
+            failedCount++;
+            if (items[i]) {
+                items[i].className = 'progress-item error';
+                items[i].textContent = `${project.name} - ❌ 失败: ${error.message}`;
+            }
+            console.error(error);
+        }
+    }
+    
+    updateProgress(currentProjects.length, currentProjects.length, '更新完成');
+    
+    isUpdating = false;
+    document.getElementById('closeProgressModalBtn').style.display = 'block';
+    
+    showToast(`更新完成！成功: ${updatedCount}, 失败: ${failedCount}`, updatedCount > 0 ? 'success' : 'error');
+    await loadProjects();
 }
