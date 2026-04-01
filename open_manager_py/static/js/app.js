@@ -88,22 +88,26 @@ function initModal() {
     const confirmDistributeBtn = document.getElementById('confirmDistributeBtn');
 
     closeBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
-    cancelBtn.addEventListener('click', closeModal);
-    saveBtn.addEventListener('click', saveResource);
-    cancelDistributeBtn.addEventListener('click', closeDistributeModal);
-    confirmDistributeBtn.addEventListener('click', confirmDistribute);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (saveBtn) saveBtn.addEventListener('click', saveResource);
+    if (cancelDistributeBtn) cancelDistributeBtn.addEventListener('click', closeDistributeModal);
+    if (confirmDistributeBtn) confirmDistributeBtn.addEventListener('click', confirmDistribute);
 
-    editModal.addEventListener('click', function(e) {
-        if (e.target === editModal) {
-            closeModal();
-        }
-    });
+    if (editModal) {
+        editModal.addEventListener('click', function(e) {
+            if (e.target === editModal) {
+                closeModal();
+            }
+        });
+    }
 
-    distributeModal.addEventListener('click', function(e) {
-        if (e.target === distributeModal) {
-            closeDistributeModal();
-        }
-    });
+    if (distributeModal) {
+        distributeModal.addEventListener('click', function(e) {
+            if (e.target === distributeModal) {
+                closeDistributeModal();
+            }
+        });
+    }
 }
 
 async function loadSkills() {
@@ -530,30 +534,45 @@ function initProgressModal() {
 }
 
 function showProgressModal(title) {
-    document.getElementById('progressTitle').textContent = title;
-    document.getElementById('progressSubtitle').textContent = '准备中...';
-    document.getElementById('progressBar').style.width = '0%';
-    document.getElementById('progressBarText').textContent = '0%';
-    document.getElementById('progressDetails').innerHTML = '';
-    document.getElementById('closeProgressModalBtn').style.display = 'none';
-    document.getElementById('progressModal').classList.add('show');
+    const progressTitle = document.getElementById('progressTitle');
+    const progressSubtitle = document.getElementById('progressSubtitle');
+    const progressBar = document.getElementById('progressBar');
+    const progressBarText = document.getElementById('progressBarText');
+    const progressDetails = document.getElementById('progressDetails');
+    const closeProgressModalBtn = document.getElementById('closeProgressModalBtn');
+    const progressModal = document.getElementById('progressModal');
+    
+    if (progressTitle) progressTitle.textContent = title;
+    if (progressSubtitle) progressSubtitle.textContent = '准备中...';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressBarText) progressBarText.textContent = '0%';
+    if (progressDetails) progressDetails.innerHTML = '';
+    if (closeProgressModalBtn) closeProgressModalBtn.style.display = 'none';
+    if (progressModal) progressModal.classList.add('show');
     isUpdating = true;
 }
 
 function closeProgressModal() {
     if (isUpdating) return;
-    document.getElementById('progressModal').classList.remove('show');
+    const progressModal = document.getElementById('progressModal');
+    if (progressModal) progressModal.classList.remove('show');
 }
 
 function updateProgress(current, total, subtitle) {
     const percent = Math.round((current / total) * 100);
-    document.getElementById('progressBar').style.width = percent + '%';
-    document.getElementById('progressBarText').textContent = percent + '%';
-    document.getElementById('progressSubtitle').textContent = subtitle;
+    const progressBar = document.getElementById('progressBar');
+    const progressBarText = document.getElementById('progressBarText');
+    const progressSubtitle = document.getElementById('progressSubtitle');
+    
+    if (progressBar) progressBar.style.width = percent + '%';
+    if (progressBarText) progressBarText.textContent = percent + '%';
+    if (progressSubtitle) progressSubtitle.textContent = subtitle;
 }
 
 function addProgressDetail(name, status) {
     const details = document.getElementById('progressDetails');
+    if (!details) return;
+    
     const item = document.createElement('div');
     item.className = 'progress-item ' + status;
     let statusText = '';
@@ -613,7 +632,8 @@ async function updateResource(type, id) {
     }
     
     isUpdating = false;
-    document.getElementById('closeProgressModalBtn').style.display = 'block';
+    const closeProgressModalBtn = document.getElementById('closeProgressModalBtn');
+    if (closeProgressModalBtn) closeProgressModalBtn.style.display = 'block';
 }
 
 async function updateAllProjects() {
@@ -674,7 +694,8 @@ async function updateAllProjects() {
     updateProgress(currentProjects.length, currentProjects.length, '更新完成');
     
     isUpdating = false;
-    document.getElementById('closeProgressModalBtn').style.display = 'block';
+    const closeProgressModalBtn = document.getElementById('closeProgressModalBtn');
+    if (closeProgressModalBtn) closeProgressModalBtn.style.display = 'block';
     
     showToast(`更新完成！成功: ${updatedCount}, 失败: ${failedCount}`, updatedCount > 0 ? 'success' : 'error');
     await loadProjects();
