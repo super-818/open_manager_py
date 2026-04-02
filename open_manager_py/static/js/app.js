@@ -521,16 +521,18 @@ function showToast(message, type = 'success') {
 function initProgressModal() {
     const closeBtn = document.getElementById('closeProgressBtn');
     const closeModalBtn = document.getElementById('closeProgressModalBtn');
-    
-    closeBtn.addEventListener('click', closeProgressModal);
-    closeModalBtn.addEventListener('click', closeProgressModal);
-    
     const progressModal = document.getElementById('progressModal');
-    progressModal.addEventListener('click', function(e) {
-        if (e.target === progressModal && !isUpdating) {
-            closeProgressModal();
-        }
-    });
+    
+    if (closeBtn) closeBtn.addEventListener('click', closeProgressModal);
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeProgressModal);
+    
+    if (progressModal) {
+        progressModal.addEventListener('click', function(e) {
+            if (e.target === progressModal && !isUpdating) {
+                closeProgressModal();
+            }
+        });
+    }
 }
 
 function showProgressModal(title) {
