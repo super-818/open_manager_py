@@ -97,19 +97,8 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>选择目标工具</label>
-                    <div class="tool-options">
-                        <label class="tool-option">
-                            <input type="checkbox" name="tool" value="trae">
-                            <span>Trae</span>
-                        </label>
-                        <label class="tool-option">
-                            <input type="checkbox" name="tool" value="claude-code">
-                            <span>Claude Code</span>
-                        </label>
-                        <label class="tool-option">
-                            <input type="checkbox" name="tool" value="openclaw">
-                            <span>OpenClaw</span>
-                        </label>
+                    <div id="distributeToolOptions" class="tool-options">
+                        <div class="loading-tools">加载工具列表...</div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -120,6 +109,23 @@
             <div class="modal-footer">
                 <button id="cancelDistributeBtn" class="btn btn-secondary">取消</button>
                 <button id="confirmDistributeBtn" class="btn btn-primary">确认分发</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="readmeModal" class="modal">
+        <div class="modal-content readme-modal-content">
+            <div class="modal-header">
+                <h2 id="readmeModalTitle">README</h2>
+                <button class="close-btn" onclick="closeReadmeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="readmeContent" class="readme-content">
+                    <div class="readme-loading">加载中...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeReadmeModal()">关闭</button>
             </div>
         </div>
     </div>

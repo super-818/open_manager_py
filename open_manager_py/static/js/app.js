@@ -92,6 +92,9 @@ function handleResourceAction(event) {
         case 'open':
             openDirectory(path);
             break;
+        case 'readme':
+            viewReadme(type, id);
+            break;
         case 'update':
             updateResource(type, id);
             break;
@@ -278,6 +281,7 @@ function renderSkills(skills) {
             <div class="resource-actions">
                 <button class="btn btn-small btn-primary btn-action" data-action="edit">编辑</button>
                 <button class="btn btn-small btn-secondary btn-action" data-action="open">打开目录</button>
+                <button class="btn btn-small btn-info btn-action" data-action="readme">README</button>
                 <button class="btn btn-small btn-success btn-action" data-action="update">更新</button>
                 <button class="btn btn-small btn-danger btn-action" data-action="delete">删除</button>
             </div>
@@ -323,6 +327,7 @@ function renderProjects(projects) {
             <div class="resource-actions">
                 <button class="btn btn-small btn-primary btn-action" data-action="edit">编辑</button>
                 <button class="btn btn-small btn-secondary btn-action" data-action="open">打开目录</button>
+                <button class="btn btn-small btn-info btn-action" data-action="readme">README</button>
                 <button class="btn btn-small btn-success btn-action" data-action="update">更新</button>
                 <button class="btn btn-small btn-danger btn-action" data-action="delete">删除</button>
             </div>
@@ -349,7 +354,7 @@ async function updateResource(type, id) {
     try {
         const response = await fetch(`/api/${type}/${id}/update`, { method: 'POST' });
         const data = await response.json();
-        
+
         if (data.success) {
             showToast('更新成功', 'success');
             await loadSkills();
@@ -361,6 +366,39 @@ async function updateResource(type, id) {
         showToast('更新失败', 'error');
         console.error(error);
     }
+}
+
+async function viewReadme(type, id) {
+    const modal = document.getElementById('readmeModal');
+    const content = document.getElementById('readmeContent');
+    const title = document.getElementById('readmeModalTitle');
+
+    modal.classList.add('show');
+    content.innerHTML = '<div class="readme-loading">加载中...</div>';
+    title.textContent = 'README';
+
+    try {
+        const response = await fetch(`/api/${type}/${id}/readme`);
+        const data = await response.json();
+
+        if (response.ok) {
+            title.textContent = `README - ${escapeHtml(data.filename || '无文件')}`;
+            if (data.content) {
+                content.innerHTML = `<pre class="readme-pre">${escapeHtml(data.content)}</pre>`;
+            } else {
+                content.innerHTML = '<div class="empty-state">未找到 README 文件</div>';
+            }
+        } else {
+            content.innerHTML = `<div class="empty-state">${escapeHtml(data.error || '加载失败')}</div>`;
+        }
+    } catch (error) {
+        content.innerHTML = '<div class="empty-state">加载失败</div>';
+        console.error(error);
+    }
+}
+
+function closeReadmeModal() {
+    document.getElementById('readmeModal').classList.remove('show');
 }
 
 function distributeSkills() {

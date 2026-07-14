@@ -674,3 +674,44 @@ body {
     padding: 60px 20px;
     color: #999;
 }
+
+.readme-modal-content {
+    max-width: 900px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.readme-content {
+    overflow: auto;
+    max-height: 60vh;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.readme-pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #333;
+    margin: 0;
+}
+
+.readme-loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
