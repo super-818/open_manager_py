@@ -12,6 +12,8 @@
             <h1>开源资源管理器</h1>
             <div class="header-actions">
                 <button id="scanBtn" class="btn btn-primary">扫描目录</button>
+                <button id="exportBtn" class="btn btn-secondary">导出</button>
+                <button id="importBtn" class="btn btn-secondary">导入</button>
             </div>
         </header>
 
@@ -127,6 +129,26 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeReadmeModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>导入数据</h2>
+                <button class="close-btn" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="importFile">选择 JSON 文件</label>
+                    <input type="file" id="importFile" accept=".json" class="form-input">
+                </div>
+                <div class="form-hint">导入将更新现有记录的分类、标签和备注，不会创建新记录。</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImportModal()">取消</button>
+                <button id="confirmImportBtn" class="btn btn-primary">导入</button>
             </div>
         </div>
     </div>

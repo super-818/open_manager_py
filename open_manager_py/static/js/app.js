@@ -60,6 +60,9 @@ function initButtons() {
     document.getElementById('exportPathsBtn').addEventListener('click', exportPaths);
     document.getElementById('checkUpdatesBtn').addEventListener('click', checkProjectUpdates);
     document.getElementById('updateAllBtn').addEventListener('click', updateAllProjects);
+    document.getElementById('exportBtn').addEventListener('click', exportData);
+    document.getElementById('importBtn').addEventListener('click', openImportModal);
+    document.getElementById('confirmImportBtn').addEventListener('click', importData);
     
     document.getElementById('skillSearch').addEventListener('input', debounce(searchSkills, 300));
     document.getElementById('skillCategory').addEventListener('change', searchSkills);
@@ -505,7 +508,7 @@ async function exportPaths() {
             body: JSON.stringify({ category })
         });
         const data = await response.json();
-        
+
         if (data.success) {
             if (navigator.clipboard) {
                 await navigator.clipboard.writeText(data.paths);
@@ -518,6 +521,70 @@ async function exportPaths() {
         }
     } catch (error) {
         showToast('导出失败', 'error');
+        console.error(error);
+    }
+}
+
+async function exportData() {
+    try {
+        const response = await fetch('/api/export', { method: 'POST' });
+        const data = await response.json();
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `open_manager_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('导出成功', 'success');
+    } catch (error) {
+        showToast('导出失败', 'error');
+        console.error(error);
+    }
+}
+
+function openImportModal() {
+    document.getElementById('importModal').classList.add('show');
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').classList.remove('show');
+    document.getElementById('importFile').value = '';
+}
+
+async function importData() {
+    const fileInput = document.getElementById('importFile');
+    const file = fileInput.files[0];
+    if (!file) {
+        showToast('请选择文件', 'error');
+        return;
+    }
+
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        const response = await fetch('/api/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(`导入成功：更新 ${result.skills_updated} 个技能，${result.projects_updated} 个项目`, 'success');
+            closeImportModal();
+            await loadSkills();
+            await loadProjects();
+            await loadStats();
+        } else {
+            showToast(result.error || '导入失败', 'error');
+        }
+    } catch (error) {
+        showToast('导入失败：文件格式错误', 'error');
         console.error(error);
     }
 }
