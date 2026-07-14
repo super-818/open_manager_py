@@ -2,6 +2,7 @@
 import pytest
 from click.testing import CliRunner
 from open_manager_py.cli import cli
+from open_manager_py import __version__
 
 
 def test_cli_help():
@@ -55,4 +56,4 @@ def test_cli_version():
     runner = CliRunner()
     result = runner.invoke(cli, ['--version'])
     assert result.exit_code == 0
-    assert '0.3.0' in result.output
+    assert __version__ in result.output

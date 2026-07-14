@@ -18,25 +18,33 @@
         </header>
 
         <nav class="tabs">
-            <button class="tab-btn active" data-tab="skills">技能管理</button>
+            <button class="tab-btn active" data-tab="dashboard">仪表盘</button>
+            <button class="tab-btn" data-tab="skills">技能管理</button>
             <button class="tab-btn" data-tab="projects">项目管理</button>
-            <button class="tab-btn" data-tab="dashboard">仪表盘</button>
         </nav>
 
         <main class="content">
-            <div id="dashboard-tab" class="tab-content">
+            <div id="dashboard-tab" class="tab-content active">
                 <div id="statsContainer" class="stats-container">
                     <div class="stats-loading">加载统计中...</div>
                 </div>
             </div>
 
-            <div id="skills-tab" class="tab-content active">
+            <div id="skills-tab" class="tab-content">
                 <div class="toolbar">
                     <input type="text" id="skillSearch" placeholder="搜索技能..." class="search-input">
                     <select id="skillCategory" class="select-input">
                         <option value="">全部分类</option>
                     </select>
                     <input type="text" id="skillTags" placeholder="标签(逗号分隔)" class="search-input" style="flex: 0.5;">
+                    <select id="skillSort" class="select-input">
+                        <option value="name">按名称 A-Z</option>
+                        <option value="name_desc">按名称 Z-A</option>
+                        <option value="size_desc">按大小 大→小</option>
+                        <option value="size">按大小 小→大</option>
+                        <option value="time_desc">按更新时间 新→旧</option>
+                        <option value="time">按更新时间 旧→新</option>
+                    </select>
                     <button id="distributeSkillsBtn" class="btn btn-secondary">分发技能</button>
                 </div>
                 <div id="skillsList" class="resource-list"></div>
@@ -49,6 +57,14 @@
                         <option value="">全部分类</option>
                     </select>
                     <input type="text" id="projectTags" placeholder="标签(逗号分隔)" class="search-input" style="flex: 0.5;">
+                    <select id="projectSort" class="select-input">
+                        <option value="name">按名称 A-Z</option>
+                        <option value="name_desc">按名称 Z-A</option>
+                        <option value="size_desc">按大小 大→小</option>
+                        <option value="size">按大小 小→大</option>
+                        <option value="time_desc">按更新时间 新→旧</option>
+                        <option value="time">按更新时间 旧→新</option>
+                    </select>
                     <button id="checkUpdatesBtn" class="btn btn-secondary">检测更新</button>
                     <button id="exportPathsBtn" class="btn btn-secondary">导出路径</button>
                     <button id="updateAllBtn" class="btn btn-primary">一键更新</button>
@@ -178,6 +194,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

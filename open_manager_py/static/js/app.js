@@ -3,7 +3,6 @@ let currentProjects = [];
 let currentEditResource = null;
 let currentEditType = null;
 let isUpdating = false;
-let categoriesCache = [];
 
 const DEFAULT_CATEGORIES = [
     {value: '科研类', label: '科研类', color: '#6c5ce7'},
@@ -17,10 +16,22 @@ const DEFAULT_CATEGORIES = [
     {value: '其他', label: '其他', color: '#636e72'},
 ];
 
+let categoriesCache = DEFAULT_CATEGORIES.slice();
+
+function hashStringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 60%, 45%)`;
+}
+
 function getCategoryColor(category) {
     if (!category) return '#636e72';
     const found = categoriesCache.find(c => c.value === category);
-    return found ? found.color : '#636e72';
+    if (found && found.color) return found.color;
+    return hashStringToColor(category);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -71,6 +82,11 @@ function initButtons() {
     document.getElementById('projectSearch').addEventListener('input', debounce(searchProjects, 300));
     document.getElementById('projectCategory').addEventListener('change', searchProjects);
     document.getElementById('projectTags').addEventListener('input', debounce(searchProjects, 300));
+
+    const skillSortEl = document.getElementById('skillSort');
+    if (skillSortEl) skillSortEl.addEventListener('change', loadSkills);
+    const projectSortEl = document.getElementById('projectSort');
+    if (projectSortEl) projectSortEl.addEventListener('change', loadProjects);
 
     // 事件委托：处理资源卡片上的按钮点击
     document.getElementById('skillsList').addEventListener('click', handleResourceAction);
@@ -219,7 +235,9 @@ function renderStats(data) {
 
 async function loadSkills() {
     try {
-        const response = await fetch('/api/skills');
+        const sortBy = document.getElementById('skillSort') ? document.getElementById('skillSort').value : '';
+        const url = sortBy ? `/api/skills?sort_by=${encodeURIComponent(sortBy)}` : '/api/skills';
+        const response = await fetch(url);
         const data = await response.json();
         currentSkills = data;
         renderSkills(currentSkills);
@@ -232,7 +250,9 @@ async function loadSkills() {
 
 async function loadProjects() {
     try {
-        const response = await fetch('/api/projects');
+        const sortBy = document.getElementById('projectSort') ? document.getElementById('projectSort').value : '';
+        const url = sortBy ? `/api/projects?sort_by=${encodeURIComponent(sortBy)}` : '/api/projects';
+        const response = await fetch(url);
         const data = await response.json();
         currentProjects = data;
         renderProjects(currentProjects);
@@ -256,7 +276,7 @@ async function loadDuplicates() {
 
 function renderSkills(skills) {
     const container = document.getElementById('skillsList');
-    
+
     if (skills.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -268,34 +288,52 @@ function renderSkills(skills) {
         return;
     }
 
-    container.innerHTML = skills.map(skill => `
+    const cardsHtml = skills.map(skill => `
         <div class="resource-card" data-type="skill" data-id="${skill.id}" data-path="${escapeHtml(skill.path)}">
-            <div class="resource-header">
-                <div>
-                    <div class="resource-title">${escapeHtml(skill.name)}</div>
-                    <div class="resource-path">${escapeHtml(skill.path)}</div>
+            <div class="resource-check">
+                <input type="checkbox" class="item-checkbox" data-type="skill" data-id="${skill.id}">
+            </div>
+            <div class="resource-body">
+                <div class="resource-header">
+                    <div>
+                        <div class="resource-title">${escapeHtml(skill.name)}</div>
+                        <div class="resource-path">${escapeHtml(skill.path)}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="resource-meta">
-                ${skill.category ? `<span class="meta-tag meta-category" style="background:${getCategoryColor(skill.category)}20;color:${getCategoryColor(skill.category)};border:1px solid ${getCategoryColor(skill.category)}40">${escapeHtml(skill.category)}</span>` : ''}
-                ${skill.tags ? skill.tags.split(',').map(tag => `<span class="meta-tag">#${escapeHtml(tag.trim())}</span>`).join('') : ''}
-                ${skill.github_url ? `<a href="${escapeHtml(skill.github_url)}" target="_blank" class="meta-tag meta-link">🔗 GitHub</a>` : ''}
-            </div>
-            ${skill.notes ? `<div class="resource-notes">${escapeHtml(skill.notes)}</div>` : ''}
-            <div class="resource-actions">
-                <button class="btn btn-small btn-primary btn-action" data-action="edit">编辑</button>
-                <button class="btn btn-small btn-secondary btn-action" data-action="open">打开目录</button>
-                <button class="btn btn-small btn-info btn-action" data-action="readme">README</button>
-                <button class="btn btn-small btn-success btn-action" data-action="update">更新</button>
-                <button class="btn btn-small btn-danger btn-action" data-action="delete">删除</button>
+                <div class="resource-meta">
+                    ${skill.category ? `<span class="meta-tag meta-category" style="background:${getCategoryColor(skill.category)}20;color:${getCategoryColor(skill.category)};border:1px solid ${getCategoryColor(skill.category)}40">${escapeHtml(skill.category)}</span>` : ''}
+                    ${skill.tags ? skill.tags.split(',').map(tag => `<span class="meta-tag">#${escapeHtml(tag.trim())}</span>`).join('') : ''}
+                    ${skill.github_url ? `<a href="${escapeHtml(skill.github_url)}" target="_blank" class="meta-tag meta-link">🔗 GitHub</a>` : ''}
+                </div>
+                ${skill.notes ? `<div class="resource-notes">${escapeHtml(skill.notes)}</div>` : ''}
+                <div class="resource-actions">
+                    <button class="btn btn-small btn-primary btn-action" data-action="edit">编辑</button>
+                    <button class="btn btn-small btn-secondary btn-action" data-action="open">打开目录</button>
+                    <button class="btn btn-small btn-info btn-action" data-action="readme">README</button>
+                    <button class="btn btn-small btn-success btn-action" data-action="update">更新</button>
+                    <button class="btn btn-small btn-danger btn-action" data-action="delete">删除</button>
+                </div>
             </div>
         </div>
     `).join('');
+
+    container.innerHTML = `
+        <div class="batch-bar" id="skillBatchBar">
+            <label class="batch-select-all"><input type="checkbox" id="skillSelectAll"> 全选</label>
+            <span class="batch-count" id="skillBatchCount">已选 0 项</span>
+            <div class="batch-actions">
+                <button class="btn btn-small btn-primary" id="skillBatchCategoryBtn">批量分类</button>
+                <button class="btn btn-small btn-danger" id="skillBatchDeleteBtn">批量删除</button>
+            </div>
+        </div>
+        ${cardsHtml}
+    `;
+    bindBatchBar('skill');
 }
 
 function renderProjects(projects) {
     const container = document.getElementById('projectsList');
-    
+
     if (projects.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -307,7 +345,7 @@ function renderProjects(projects) {
         return;
     }
 
-    container.innerHTML = projects.map(project => {
+    const cardsHtml = projects.map(project => {
         let title = escapeHtml(project.name);
         if (project.version) {
             title += ` <span class="version-tag">v${escapeHtml(project.version)}</span>`;
@@ -318,28 +356,46 @@ function renderProjects(projects) {
 
         return `
         <div class="resource-card" data-type="project" data-id="${project.id}" data-path="${escapeHtml(project.path)}">
-            <div class="resource-header">
-                <div>
-                    <div class="resource-title">${title}</div>
-                    <div class="resource-path">${escapeHtml(project.path)}</div>
-                    ${project.create_time ? `<div class="resource-time">克隆时间: ${formatDate(project.create_time)}</div>` : ''}
+            <div class="resource-check">
+                <input type="checkbox" class="item-checkbox" data-type="project" data-id="${project.id}">
+            </div>
+            <div class="resource-body">
+                <div class="resource-header">
+                    <div>
+                        <div class="resource-title">${title}</div>
+                        <div class="resource-path">${escapeHtml(project.path)}</div>
+                        ${project.create_time ? `<div class="resource-time">克隆时间: ${formatDate(project.create_time)}</div>` : ''}
+                    </div>
                 </div>
-            </div>
-            <div class="resource-meta">
-                ${project.category ? `<span class="meta-tag meta-category" style="background:${getCategoryColor(project.category)}20;color:${getCategoryColor(project.category)};border:1px solid ${getCategoryColor(project.category)}40">${escapeHtml(project.category)}</span>` : ''}
-                ${project.tags ? project.tags.split(',').map(tag => `<span class="meta-tag">#${escapeHtml(tag.trim())}</span>`).join('') : ''}
-                ${project.github_url ? `<a href="${escapeHtml(project.github_url)}" target="_blank" class="meta-tag meta-link">🔗 GitHub</a>` : ''}
-            </div>
-            ${project.notes ? `<div class="resource-notes">${escapeHtml(project.notes)}</div>` : ''}
-            <div class="resource-actions">
-                <button class="btn btn-small btn-primary btn-action" data-action="edit">编辑</button>
-                <button class="btn btn-small btn-secondary btn-action" data-action="open">打开目录</button>
-                <button class="btn btn-small btn-info btn-action" data-action="readme">README</button>
-                <button class="btn btn-small btn-success btn-action" data-action="update">更新</button>
-                <button class="btn btn-small btn-danger btn-action" data-action="delete">删除</button>
+                <div class="resource-meta">
+                    ${project.category ? `<span class="meta-tag meta-category" style="background:${getCategoryColor(project.category)}20;color:${getCategoryColor(project.category)};border:1px solid ${getCategoryColor(project.category)}40">${escapeHtml(project.category)}</span>` : ''}
+                    ${project.tags ? project.tags.split(',').map(tag => `<span class="meta-tag">#${escapeHtml(tag.trim())}</span>`).join('') : ''}
+                    ${project.github_url ? `<a href="${escapeHtml(project.github_url)}" target="_blank" class="meta-tag meta-link">🔗 GitHub</a>` : ''}
+                </div>
+                ${project.notes ? `<div class="resource-notes">${escapeHtml(project.notes)}</div>` : ''}
+                <div class="resource-actions">
+                    <button class="btn btn-small btn-primary btn-action" data-action="edit">编辑</button>
+                    <button class="btn btn-small btn-secondary btn-action" data-action="open">打开目录</button>
+                    <button class="btn btn-small btn-info btn-action" data-action="readme">README</button>
+                    <button class="btn btn-small btn-success btn-action" data-action="update">更新</button>
+                    <button class="btn btn-small btn-danger btn-action" data-action="delete">删除</button>
+                </div>
             </div>
         </div>
     `}).join('');
+
+    container.innerHTML = `
+        <div class="batch-bar" id="projectBatchBar">
+            <label class="batch-select-all"><input type="checkbox" id="projectSelectAll"> 全选</label>
+            <span class="batch-count" id="projectBatchCount">已选 0 项</span>
+            <div class="batch-actions">
+                <button class="btn btn-small btn-primary" id="projectBatchCategoryBtn">批量分类</button>
+                <button class="btn btn-small btn-danger" id="projectBatchDeleteBtn">批量删除</button>
+            </div>
+        </div>
+        ${cardsHtml}
+    `;
+    bindBatchBar('project');
 }
 
 function formatDate(dateStr) {
@@ -355,6 +411,86 @@ function formatDate(dateStr) {
     } catch {
         return dateStr;
     }
+}
+
+function getSelectedIds(type) {
+    const checkboxes = document.querySelectorAll(`.item-checkbox[data-type="${type}"]:checked`);
+    return Array.from(checkboxes).map(cb => parseInt(cb.dataset.id));
+}
+
+function updateBatchCount(type) {
+    const ids = getSelectedIds(type);
+    const countEl = document.getElementById(`${type}BatchCount`);
+    const selectAllEl = document.getElementById(`${type}SelectAll`);
+    const allBoxes = document.querySelectorAll(`.item-checkbox[data-type="${type}"]`);
+    if (countEl) countEl.textContent = `已选 ${ids.length} 项`;
+    if (selectAllEl) selectAllEl.checked = allBoxes.length > 0 && ids.length === allBoxes.length;
+}
+
+function bindBatchBar(type) {
+    const selectAll = document.getElementById(`${type}SelectAll`);
+    const catBtn = document.getElementById(`${type}BatchCategoryBtn`);
+    const delBtn = document.getElementById(`${type}BatchDeleteBtn`);
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            const boxes = document.querySelectorAll(`.item-checkbox[data-type="${type}"]`);
+            boxes.forEach(b => { b.checked = selectAll.checked; });
+            updateBatchCount(type);
+        });
+    }
+
+    document.querySelectorAll(`.item-checkbox[data-type="${type}"]`).forEach(cb => {
+        cb.addEventListener('change', () => updateBatchCount(type));
+    });
+
+    if (catBtn) {
+        catBtn.addEventListener('click', () => openBatchCategoryModal(type));
+    }
+    if (delBtn) {
+        delBtn.addEventListener('click', () => batchDelete(type));
+    }
+}
+
+async function batchDelete(type) {
+    const ids = getSelectedIds(type);
+    if (ids.length === 0) { showToast('请先选择要删除的项', 'error'); return; }
+    if (!confirm(`确定要删除选中的 ${ids.length} 项吗？此操作不可撤销。`)) return;
+    let success = 0, failed = 0;
+    for (const id of ids) {
+        try {
+            const res = await fetch(`/api/${type}/${id}/delete`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) success++; else failed++;
+        } catch { failed++; }
+    }
+    showToast(`批量删除完成: 成功 ${success} 项, 失败 ${failed} 项`, failed > 0 ? 'error' : 'success');
+    if (type === 'skill') await loadSkills(); else await loadProjects();
+}
+
+function openBatchCategoryModal(type) {
+    const ids = getSelectedIds(type);
+    if (ids.length === 0) { showToast('请先选择要分类的项', 'error'); return; }
+    const category = prompt(`请输入分类名称 (${ids.length} 项将设置为该分类，留空则清除分类):`);
+    if (category === null) return;
+    batchSetCategory(type, ids, category.trim());
+}
+
+async function batchSetCategory(type, ids, category) {
+    let success = 0, failed = 0;
+    for (const id of ids) {
+        try {
+            const res = await fetch(`/api/${type}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category: category || null })
+            });
+            const data = await res.json();
+            if (data.success) success++; else failed++;
+        } catch { failed++; }
+    }
+    showToast(`批量分类完成: 成功 ${success} 项, 失败 ${failed} 项`, failed > 0 ? 'error' : 'success');
+    if (type === 'skill') await loadSkills(); else await loadProjects();
 }
 
 async function updateResource(type, id) {
@@ -391,7 +527,13 @@ async function viewReadme(type, id) {
         if (response.ok) {
             title.textContent = `README - ${escapeHtml(data.filename || '无文件')}`;
             if (data.content) {
-                content.innerHTML = `<pre class="readme-pre">${escapeHtml(data.content)}</pre>`;
+                const isMarkdown = /\.(md|markdown|mdown|mkd)$/i.test(data.filename || '');
+                if (isMarkdown && typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+                    const html = marked.parse(data.content || '');
+                    content.innerHTML = `<div class="markdown-body">${DOMPurify.sanitize(html)}</div>`;
+                } else {
+                    content.innerHTML = `<pre class="readme-pre">${escapeHtml(data.content)}</pre>`;
+                }
             } else {
                 content.innerHTML = '<div class="empty-state">未找到 README 文件</div>';
             }

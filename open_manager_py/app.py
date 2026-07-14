@@ -12,6 +12,7 @@ from pathlib import Path
 from .config import get_config
 from .database import get_database
 from .scanner import get_scanner
+from . import __version__
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
@@ -36,9 +37,11 @@ def index():
 
 @app.route('/api/skills')
 def get_skills():
-    """获取所有技能"""
-    db = get_database()
-    skills = db.get_all_skills()
+    """获取所有技能，支持 ?sort_by= 参数"""
+    from .services import SkillService
+    sort_by = request.args.get('sort_by')
+    service = SkillService()
+    skills = service.list_all(sort_by=sort_by)
     for skill in skills:
         skill['local_size_formatted'] = format_size(skill.get('local_size', 0))
         if 'remark' in skill:
@@ -51,9 +54,11 @@ def get_skills():
 
 @app.route('/api/projects')
 def get_projects():
-    """获取所有项目"""
-    db = get_database()
-    projects = db.get_all_projects()
+    """获取所有项目，支持 ?sort_by= 参数"""
+    from .services import ProjectService
+    sort_by = request.args.get('sort_by')
+    service = ProjectService()
+    projects = service.list_all(sort_by=sort_by)
     for project in projects:
         project['local_size_formatted'] = format_size(project.get('local_size', 0))
         if 'remark' in project:
@@ -189,7 +194,14 @@ PRESET_CATEGORIES = [
 
 @app.route('/api/categories')
 def get_categories():
-    """获取预设分类列表"""
+    """获取预设分类列表（自定义分类自动生成稳定颜色）"""
+    def _hash_color(name: str) -> str:
+        h = 0
+        for ch in name:
+            h = ord(ch) + ((h << 5) - h)
+        hue = abs(h) % 360
+        return f'hsl({hue}, 60%, 45%)'
+
     db = get_database()
     skills = db.get_all_skills()
     projects = db.get_all_projects()
@@ -203,7 +215,7 @@ def get_categories():
     custom_categories = []
     for cat in used_categories:
         if not any(p['value'] == cat for p in PRESET_CATEGORIES):
-            custom_categories.append({'value': cat, 'label': cat, 'color': '#636e72'})
+            custom_categories.append({'value': cat, 'label': cat, 'color': _hash_color(cat)})
     all_categories = PRESET_CATEGORIES + custom_categories
     return jsonify(all_categories)
 
@@ -236,86 +248,11 @@ def update_skill_single(skill_id: int):
 
 @app.route('/api/project/<int:project_id>/update', methods=['POST'])
 def update_project_single(project_id: int):
-    """更新单个项目 - 使用git clone最新版（静默进行）"""
-    import shutil
-    import tempfile
-    
-    try:
-        db = get_database()
-        project = db.get_project(project_id)
-        if not project:
-            return jsonify({'success': False, 'error': 'Project not found'})
-        
-        project_path = Path(project['path'])
-        github_url = project.get('github_url')
-        
-        if not github_url:
-            return jsonify({'success': False, 'error': 'No GitHub URL found'})
-        
-        # 备份旧目录
-        parent_dir = project_path.parent
-        temp_dir = tempfile.mkdtemp(dir=str(parent_dir))
-        backup_path = Path(temp_dir) / project_path.name
-        
-        try:
-            if project_path.exists():
-                shutil.move(str(project_path), str(backup_path))
-            
-            # 克隆最新版
-            result = subprocess.run(
-                ['git', 'clone', '--depth', '1', github_url, str(project_path)],
-                capture_output=True,
-                text=True,
-                timeout=600
-            )
-            
-            if result.returncode == 0:
-                # 克隆成功，删除备份
-                try:
-                    shutil.rmtree(temp_dir)
-                except:
-                    pass
-                
-                scanner = get_scanner()
-                scan_result = scanner.scan_projects()
-                return jsonify({
-                    'success': True,
-                    'message': 'Project updated successfully',
-                    'result': scan_result
-                })
-            else:
-                # 克隆失败，恢复备份
-                if backup_path.exists():
-                    if project_path.exists():
-                        shutil.rmtree(str(project_path))
-                    shutil.move(str(backup_path), str(project_path))
-                
-                # 清理临时目录
-                try:
-                    shutil.rmtree(temp_dir)
-                except:
-                    pass
-                
-                return jsonify({
-                    'success': False,
-                    'error': f'Git clone failed: {result.stderr}'
-                })
-        except subprocess.TimeoutExpired:
-            # 超时，恢复备份
-            if backup_path.exists():
-                if project_path.exists():
-                    shutil.rmtree(str(project_path))
-                shutil.move(str(backup_path), str(project_path))
-            
-            # 清理临时目录
-            try:
-                shutil.rmtree(temp_dir)
-            except:
-                pass
-            
-            return jsonify({'success': False, 'error': 'Git clone timeout'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+    """更新单个项目"""
+    from .services import ProjectService
+    service = ProjectService()
+    result = service.update_project(project_id)
+    return jsonify(result)
 
 
 @app.route('/api/skills/distribute', methods=['POST'])
@@ -409,106 +346,11 @@ def export_project_paths():
 
 @app.route('/api/projects/update-all', methods=['POST'])
 def update_all_projects():
-    """更新所有项目 - 使用git clone最新版（静默进行）"""
-    import shutil
-    import tempfile
-    
-    try:
-        db = get_database()
-        projects = db.get_all_projects()
-        updated_count = 0
-        failed_count = 0
-        errors = []
-        
-        for project in projects:
-            project_path = Path(project['path'])
-            github_url = project.get('github_url')
-            
-            if not github_url:
-                failed_count += 1
-                errors.append(f"{project['name']}: No GitHub URL")
-                continue
-            
-            # 备份旧目录
-            parent_dir = project_path.parent
-            temp_dir = tempfile.mkdtemp(dir=str(parent_dir))
-            backup_path = Path(temp_dir) / project_path.name
-            
-            try:
-                if project_path.exists():
-                    shutil.move(str(project_path), str(backup_path))
-                
-                # 克隆最新版
-                result = subprocess.run(
-                    ['git', 'clone', '--depth', '1', github_url, str(project_path)],
-                    capture_output=True,
-                    text=True,
-                    timeout=600
-                )
-                
-                if result.returncode == 0:
-                    # 克隆成功，删除备份
-                    updated_count += 1
-                    try:
-                        shutil.rmtree(temp_dir)
-                    except:
-                        pass
-                else:
-                    # 克隆失败，恢复备份
-                    failed_count += 1
-                    errors.append(f"{project['name']}: {result.stderr}")
-                    if backup_path.exists():
-                        if project_path.exists():
-                            shutil.rmtree(str(project_path))
-                        shutil.move(str(backup_path), str(project_path))
-                    
-                    # 清理临时目录
-                    try:
-                        shutil.rmtree(temp_dir)
-                    except:
-                        pass
-                    
-            except subprocess.TimeoutExpired:
-                # 超时，恢复备份
-                failed_count += 1
-                errors.append(f"{project['name']}: Timeout")
-                if backup_path.exists():
-                    if project_path.exists():
-                        shutil.rmtree(str(project_path))
-                    shutil.move(str(backup_path), str(project_path))
-                
-                # 清理临时目录
-                try:
-                    shutil.rmtree(temp_dir)
-                except:
-                    pass
-            except Exception as e:
-                failed_count += 1
-                errors.append(f"{project['name']}: {str(e)}")
-                if backup_path.exists():
-                    if project_path.exists():
-                        shutil.rmtree(str(project_path))
-                    shutil.move(str(backup_path), str(project_path))
-                
-                # 清理临时目录
-                try:
-                    shutil.rmtree(temp_dir)
-                except:
-                    pass
-        
-        # 重新扫描项目
-        scanner = get_scanner()
-        scan_result = scanner.scan_projects()
-        
-        return jsonify({
-            'success': True,
-            'updated_count': updated_count,
-            'failed_count': failed_count,
-            'errors': errors,
-            'result': scan_result
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+    """更新所有项目"""
+    from .services import ProjectService
+    service = ProjectService()
+    result = service.update_all_projects()
+    return jsonify(result)
 
 
 @app.route('/api/skills/search', methods=['POST'])
@@ -679,7 +521,7 @@ def export_data():
         'skills': skills,
         'projects': projects,
         'exported_at': datetime.now().isoformat(),
-        'version': '0.3.0'
+        'version': __version__
     })
 
 

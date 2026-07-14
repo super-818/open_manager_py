@@ -49,3 +49,7 @@ Thumbs.db
 # Project specific
 open_manager_py/data/
 *.pyc
+screenshots/
+take_screenshot.py
+demo_*.png
+start_jupyter_server.sh

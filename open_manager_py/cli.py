@@ -8,6 +8,7 @@ from .database import get_database
 from .scanner import get_scanner
 from .services import SkillService, ProjectService
 from .logger import get_logger
+from . import __version__
 
 
 def format_size(size_bytes: int) -> str:
@@ -22,7 +23,7 @@ def format_size(size_bytes: int) -> str:
 
 
 @click.group()
-@click.version_option(version='0.3.0')
+@click.version_option(version=__version__)
 def cli():
     """Open Manager - 开源技能与GitHub项目管理器"""
     pass
@@ -200,7 +201,7 @@ def export(output):
         'skills': db.get_all_skills(),
         'projects': db.get_all_projects(),
         'exported_at': datetime.now().isoformat(),
-        'version': '0.3.0'
+        'version': __version__
     }
 
     # 清理不可序列化字段
