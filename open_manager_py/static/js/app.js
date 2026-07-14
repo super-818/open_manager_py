@@ -430,8 +430,27 @@ async function checkProjectUpdates() {
     }
 }
 
-function distributeSkills() {
+async function distributeSkills() {
     document.getElementById('distributeModal').classList.add('show');
+    await loadDistributeTargets();
+}
+
+async function loadDistributeTargets() {
+    const container = document.getElementById('distributeToolOptions');
+    try {
+        const response = await fetch('/api/distribute-targets');
+        const data = await response.json();
+
+        container.innerHTML = Object.entries(data).map(([key, path]) => `
+            <label class="tool-option" title="${escapeHtml(path)}">
+                <input type="checkbox" name="tool" value="${escapeHtml(key)}">
+                <span>${escapeHtml(key)}</span>
+            </label>
+        `).join('');
+    } catch (error) {
+        container.innerHTML = '<div class="empty-state-hint">加载工具列表失败</div>';
+        console.error(error);
+    }
 }
 
 function closeAllModals() {
