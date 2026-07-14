@@ -66,8 +66,14 @@ def test_project_readme_api_returns_content(client):
     assert response.status_code == 404
 
 
-def test_check_updates_api(client):
-    """测试更新检测API"""
+def test_check_updates_api(client, monkeypatch):
+    """测试更新检测API(使用mock避免真实git操作)"""
+    from open_manager_py import updater
+    monkeypatch.setattr(
+        updater.UpdateChecker,
+        'check_projects',
+        lambda self: {'total': 0, 'has_update': 0, 'up_to_date': 0, 'errors': 0, 'details': []}
+    )
     response = client.post('/api/projects/check-updates', json={})
     assert response.status_code == 200
     data = response.get_json()

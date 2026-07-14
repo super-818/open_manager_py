@@ -5,6 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/super-818/open_manager_py)
+[![Version](https://img.shields.io/badge/Version-0.4.0-orange.svg)](https://github.com/super-818/open_manager_py)
 
 ---
 
@@ -113,6 +114,18 @@ python run.py
 - 数据库: `~/.open_manager/open_manager.db`
 
 可在 `config.py` 中自定义。
+
+---
+
+## 📦 版本更新
+
+### v0.4.0 (2026-07-14)
+- 新增 Web 仪表盘，实时统计技能/项目数量与分类分布
+- 技能/项目搜索支持名称、分类、标签组合过滤
+- 支持 README 在线预览，快速了解项目用途
+- 项目更新检测，显示可更新仓库徽章
+- 支持 10+ AI 工具（Trae/Cursor/Claude 等）的技能分发
+- 数据导出导入，方便备份与迁移
 
 ---
 
