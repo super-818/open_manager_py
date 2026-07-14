@@ -60,11 +60,13 @@ function initButtons() {
     document.getElementById('exportPathsBtn').addEventListener('click', exportPaths);
     document.getElementById('updateAllBtn').addEventListener('click', updateAllProjects);
     
-    document.getElementById('skillSearch').addEventListener('input', filterSkills);
-    document.getElementById('skillCategory').addEventListener('change', filterSkills);
-    
-    document.getElementById('projectSearch').addEventListener('input', filterProjects);
-    document.getElementById('projectCategory').addEventListener('change', filterProjects);
+    document.getElementById('skillSearch').addEventListener('input', debounce(searchSkills, 300));
+    document.getElementById('skillCategory').addEventListener('change', searchSkills);
+    document.getElementById('skillTags').addEventListener('input', debounce(searchSkills, 300));
+
+    document.getElementById('projectSearch').addEventListener('input', debounce(searchProjects, 300));
+    document.getElementById('projectCategory').addEventListener('change', searchProjects);
+    document.getElementById('projectTags').addEventListener('input', debounce(searchProjects, 300));
 
     // 事件委托：处理资源卡片上的按钮点击
     document.getElementById('skillsList').addEventListener('click', handleResourceAction);
@@ -448,34 +450,54 @@ function updateCategorySelect(selectId, resources) {
         merged.map(cat => `<option value="${escapeHtml(cat.value)}">${escapeHtml(cat.label)}</option>`).join('');
 }
 
-function filterSkills() {
-    const search = document.getElementById('skillSearch').value.toLowerCase();
+async function searchSkills() {
+    const query = document.getElementById('skillSearch').value;
     const category = document.getElementById('skillCategory').value;
-    
-    const filtered = currentSkills.filter(skill => {
-        const matchSearch = !search || 
-            skill.name.toLowerCase().includes(search) || 
-            (skill.notes && skill.notes.toLowerCase().includes(search));
-        const matchCategory = !category || skill.category === category;
-        return matchSearch && matchCategory;
-    });
-    
-    renderSkills(filtered);
+    const tags = document.getElementById('skillTags').value;
+
+    try {
+        const response = await fetch('/api/skills/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, category, tags })
+        });
+        const data = await response.json();
+        renderSkills(data);
+    } catch (error) {
+        showToast('搜索失败', 'error');
+        console.error(error);
+    }
 }
 
-function filterProjects() {
-    const search = document.getElementById('projectSearch').value.toLowerCase();
+async function searchProjects() {
+    const query = document.getElementById('projectSearch').value;
     const category = document.getElementById('projectCategory').value;
-    
-    const filtered = currentProjects.filter(project => {
-        const matchSearch = !search || 
-            project.name.toLowerCase().includes(search) || 
-            (project.notes && project.notes.toLowerCase().includes(search));
-        const matchCategory = !category || project.category === category;
-        return matchSearch && matchCategory;
-    });
-    
-    renderProjects(filtered);
+    const tags = document.getElementById('projectTags').value;
+
+    try {
+        const response = await fetch('/api/projects/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, category, tags })
+        });
+        const data = await response.json();
+        renderProjects(data);
+    } catch (error) {
+        showToast('搜索失败', 'error');
+        console.error(error);
+    }
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
 async function scanDirectories() {
