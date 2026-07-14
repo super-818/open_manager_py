@@ -3,12 +3,33 @@ let currentProjects = [];
 let currentEditResource = null;
 let currentEditType = null;
 let isUpdating = false;
+let categoriesCache = [];
+
+const DEFAULT_CATEGORIES = [
+    {value: '科研类', label: '科研类', color: '#6c5ce7'},
+    {value: '金融类', label: '金融类', color: '#00b894'},
+    {value: '开发工具', label: '开发工具', color: '#0984e3'},
+    {value: '数据分析', label: '数据分析', color: '#e17055'},
+    {value: 'AI/ML', label: 'AI/ML', color: '#fdcb6e'},
+    {value: '自动化', label: '自动化', color: '#e84393'},
+    {value: '安全', label: '安全', color: '#d63031'},
+    {value: '设计', label: '设计', color: '#a29bfe'},
+    {value: '其他', label: '其他', color: '#636e72'},
+];
+
+function getCategoryColor(category) {
+    if (!category) return '#636e72';
+    const found = categoriesCache.find(c => c.value === category);
+    return found ? found.color : '#636e72';
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     initTabs();
     initButtons();
     initModal();
     initProgressModal();
+    loadCategories();
+    loadStats();
     loadSkills();
     loadProjects();
 });
@@ -86,12 +107,26 @@ function initModal() {
     const saveBtn = document.getElementById('saveBtn');
     const cancelDistributeBtn = document.getElementById('cancelDistributeBtn');
     const confirmDistributeBtn = document.getElementById('confirmDistributeBtn');
+    const categorySelect = document.getElementById('editCategorySelect');
+    const categoryCustomInput = document.getElementById('editCategoryCustom');
 
     closeBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     if (saveBtn) saveBtn.addEventListener('click', saveResource);
     if (cancelDistributeBtn) cancelDistributeBtn.addEventListener('click', closeDistributeModal);
     if (confirmDistributeBtn) confirmDistributeBtn.addEventListener('click', confirmDistribute);
+
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            if (this.value === '__custom__') {
+                categoryCustomInput.style.display = 'block';
+                categoryCustomInput.focus();
+            } else {
+                categoryCustomInput.style.display = 'none';
+                categoryCustomInput.value = '';
+            }
+        });
+    }
 
     if (editModal) {
         editModal.addEventListener('click', function(e) {
@@ -108,6 +143,69 @@ function initModal() {
             }
         });
     }
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        categoriesCache = data;
+    } catch (error) {
+        categoriesCache = DEFAULT_CATEGORIES;
+    }
+}
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        renderStats(data);
+    } catch (error) {
+        console.error('加载统计失败', error);
+        const container = document.getElementById('statsContainer');
+        if (container) container.innerHTML = '<div class="empty-state">加载统计失败</div>';
+    }
+}
+
+function renderStats(data) {
+    const container = document.getElementById('statsContainer');
+    if (!container) return;
+
+    const categoriesHtml = Object.entries(data.categories || {})
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, count]) => `
+            <div class="stat-category-item">
+                <span class="stat-category-name">${escapeHtml(cat)}</span>
+                <span class="stat-category-count">${count}</span>
+            </div>
+        `).join('');
+
+    container.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">${data.skills_count}</div>
+                <div class="stat-label">技能总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${data.projects_count}</div>
+                <div class="stat-label">项目总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${escapeHtml(data.total_size_formatted || '0 B')}</div>
+                <div class="stat-label">总占用空间</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${data.skills_with_github + data.projects_with_github}</div>
+                <div class="stat-label">含 GitHub 链接</div>
+            </div>
+        </div>
+        <div class="stats-section">
+            <h3>分类分布</h3>
+            <div class="stat-categories">
+                ${categoriesHtml || '<div class="empty-state-hint">暂无分类数据</div>'}
+            </div>
+        </div>
+    `;
 }
 
 async function loadSkills() {
@@ -170,7 +268,7 @@ function renderSkills(skills) {
                 </div>
             </div>
             <div class="resource-meta">
-                ${skill.category ? `<span class="meta-tag meta-category">${escapeHtml(skill.category)}</span>` : ''}
+                ${skill.category ? `<span class="meta-tag meta-category" style="background:${getCategoryColor(skill.category)}20;color:${getCategoryColor(skill.category)};border:1px solid ${getCategoryColor(skill.category)}40">${escapeHtml(skill.category)}</span>` : ''}
                 ${skill.tags ? skill.tags.split(',').map(tag => `<span class="meta-tag">#${escapeHtml(tag.trim())}</span>`).join('') : ''}
                 ${skill.github_url ? `<a href="${escapeHtml(skill.github_url)}" target="_blank" class="meta-tag meta-link">🔗 GitHub</a>` : ''}
             </div>
@@ -215,7 +313,7 @@ function renderProjects(projects) {
                 </div>
             </div>
             <div class="resource-meta">
-                ${project.category ? `<span class="meta-tag meta-category">${escapeHtml(project.category)}</span>` : ''}
+                ${project.category ? `<span class="meta-tag meta-category" style="background:${getCategoryColor(project.category)}20;color:${getCategoryColor(project.category)};border:1px solid ${getCategoryColor(project.category)}40">${escapeHtml(project.category)}</span>` : ''}
                 ${project.tags ? project.tags.split(',').map(tag => `<span class="meta-tag">#${escapeHtml(tag.trim())}</span>`).join('') : ''}
                 ${project.github_url ? `<a href="${escapeHtml(project.github_url)}" target="_blank" class="meta-tag meta-link">🔗 GitHub</a>` : ''}
             </div>
@@ -338,9 +436,16 @@ async function exportPaths() {
 
 function updateCategorySelect(selectId, resources) {
     const select = document.getElementById(selectId);
-    const categories = [...new Set(resources.map(r => r.category).filter(c => c))];
+    const usedCategories = [...new Set(resources.map(r => r.category).filter(c => c))];
+    const allCategoryValues = new Set(categoriesCache.map(c => c.value));
+    const merged = [...categoriesCache];
+    for (const cat of usedCategories) {
+        if (!allCategoryValues.has(cat)) {
+            merged.push({value: cat, label: cat, color: '#636e72'});
+        }
+    }
     select.innerHTML = '<option value="">全部分类</option>' + 
-        categories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('');
+        merged.map(cat => `<option value="${escapeHtml(cat.value)}">${escapeHtml(cat.label)}</option>`).join('');
 }
 
 function filterSkills() {
@@ -408,18 +513,57 @@ function editResource(type, id) {
     currentEditType = type;
     
     document.getElementById('modalTitle').textContent = `编辑${type === 'skill' ? '技能' : '项目'}`;
-    document.getElementById('editCategory').value = resource.category || '';
+    
+    populateCategorySelect(resource.category || '');
     document.getElementById('editTags').value = resource.tags || '';
     document.getElementById('editNotes').value = resource.notes || '';
     
     document.getElementById('editModal').classList.add('show');
 }
 
+function populateCategorySelect(currentCategory) {
+    const select = document.getElementById('editCategorySelect');
+    const customInput = document.getElementById('editCategoryCustom');
+    
+    const allCategoryValues = new Set(categoriesCache.map(c => c.value));
+    const merged = [...categoriesCache];
+    if (currentCategory && !allCategoryValues.has(currentCategory)) {
+        merged.push({value: currentCategory, label: currentCategory, color: '#636e72'});
+    }
+    
+    select.innerHTML = '<option value="">选择分类...</option>' +
+        merged.map(cat => `<option value="${escapeHtml(cat.value)}">${escapeHtml(cat.label)}</option>`).join('') +
+        '<option value="__custom__">自定义分类...</option>';
+    
+    if (currentCategory && allCategoryValues.has(currentCategory)) {
+        select.value = currentCategory;
+        customInput.style.display = 'none';
+        customInput.value = '';
+    } else if (currentCategory) {
+        select.value = '__custom__';
+        customInput.style.display = 'block';
+        customInput.value = currentCategory;
+    } else {
+        select.value = '';
+        customInput.style.display = 'none';
+        customInput.value = '';
+    }
+}
+
 async function saveResource() {
     if (!currentEditResource || !currentEditType) return;
     
+    const categorySelect = document.getElementById('editCategorySelect');
+    const customInput = document.getElementById('editCategoryCustom');
+    let category = '';
+    if (categorySelect.value === '__custom__') {
+        category = customInput.value.trim();
+    } else {
+        category = categorySelect.value;
+    }
+    
     const data = {
-        category: document.getElementById('editCategory').value,
+        category: category,
         tags: document.getElementById('editTags').value,
         notes: document.getElementById('editNotes').value
     };
@@ -447,6 +591,8 @@ async function saveResource() {
 
 function closeModal() {
     document.getElementById('editModal').classList.remove('show');
+    document.getElementById('editCategoryCustom').style.display = 'none';
+    document.getElementById('editCategoryCustom').value = '';
     currentEditResource = null;
     currentEditType = null;
 }
