@@ -1,5 +1,5 @@
 """
-开源技能与GitHub项目本地管理器 - Web版
+开源技能与GitHub项目本地管理器 - Web+CLI版
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

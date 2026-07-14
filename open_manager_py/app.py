@@ -174,6 +174,40 @@ def open_github():
 
 
 
+PRESET_CATEGORIES = [
+    {'value': '科研类', 'label': '科研类', 'color': '#6c5ce7'},
+    {'value': '金融类', 'label': '金融类', 'color': '#00b894'},
+    {'value': '开发工具', 'label': '开发工具', 'color': '#0984e3'},
+    {'value': '数据分析', 'label': '数据分析', 'color': '#e17055'},
+    {'value': 'AI/ML', 'label': 'AI/ML', 'color': '#fdcb6e'},
+    {'value': '自动化', 'label': '自动化', 'color': '#e84393'},
+    {'value': '安全', 'label': '安全', 'color': '#d63031'},
+    {'value': '设计', 'label': '设计', 'color': '#a29bfe'},
+    {'value': '其他', 'label': '其他', 'color': '#636e72'},
+]
+
+
+@app.route('/api/categories')
+def get_categories():
+    """获取预设分类列表"""
+    db = get_database()
+    skills = db.get_all_skills()
+    projects = db.get_all_projects()
+    used_categories = set()
+    for s in skills:
+        if s.get('category'):
+            used_categories.add(s['category'])
+    for p in projects:
+        if p.get('category'):
+            used_categories.add(p['category'])
+    custom_categories = []
+    for cat in used_categories:
+        if not any(p['value'] == cat for p in PRESET_CATEGORIES):
+            custom_categories.append({'value': cat, 'label': cat, 'color': '#636e72'})
+    all_categories = PRESET_CATEGORIES + custom_categories
+    return jsonify(all_categories)
+
+
 @app.route('/api/config')
 def get_config_api():
     """获取配置"""
@@ -475,6 +509,248 @@ def update_all_projects():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/skills/search', methods=['POST'])
+def search_skills():
+    """搜索技能(按名称、备注、标签、分类)"""
+    from .services import SkillService
+    data = request.get_json() or {}
+    service = SkillService()
+    results = service.search(
+        query=data.get('query', ''),
+        category=data.get('category'),
+        tags=data.get('tags')
+    )
+    for skill in results:
+        skill['local_size_formatted'] = format_size(skill.get('local_size', 0))
+        if 'remark' in skill:
+            skill['notes'] = skill['remark']
+        tags_val = skill.get('tags')
+        if tags_val and isinstance(tags_val, list):
+            skill['tags'] = ', '.join(tags_val)
+    return jsonify(results)
+
+
+@app.route('/api/projects/search', methods=['POST'])
+def search_projects():
+    """搜索项目(按名称、备注、标签、分类)"""
+    from .services import ProjectService
+    data = request.get_json() or {}
+    service = ProjectService()
+    results = service.search(
+        query=data.get('query', ''),
+        category=data.get('category'),
+        tags=data.get('tags')
+    )
+    for project in results:
+        project['local_size_formatted'] = format_size(project.get('local_size', 0))
+        if 'remark' in project:
+            project['notes'] = project['remark']
+        tags_val = project.get('tags')
+        if tags_val and isinstance(tags_val, list):
+            project['tags'] = ', '.join(tags_val)
+    return jsonify(results)
+
+
+@app.route('/api/stats')
+def get_stats():
+    """获取统计数据(技能/项目数量、分类分布、总大小)"""
+    db = get_database()
+    skills = db.get_all_skills()
+    projects = db.get_all_projects()
+
+    # 分类统计
+    categories = {}
+    for s in skills + projects:
+        cat = s.get('category') or '未分类'
+        categories[cat] = categories.get(cat, 0) + 1
+
+    # 总大小
+    total_size = sum(s.get('local_size', 0) for s in skills + projects)
+
+    # 有GitHub链接的数量
+    skills_with_github = sum(1 for s in skills if s.get('github_url'))
+    projects_with_github = sum(1 for p in projects if p.get('github_url'))
+
+    return jsonify({
+        'skills_count': len(skills),
+        'projects_count': len(projects),
+        'categories': categories,
+        'total_size': total_size,
+        'total_size_formatted': format_size(total_size),
+        'skills_with_github': skills_with_github,
+        'projects_with_github': projects_with_github
+    })
+
+
+@app.route('/api/skill/<int:skill_id>/readme')
+def get_skill_readme(skill_id: int):
+    """获取技能的README/SKILL.md内容"""
+    db = get_database()
+    skill = db.get_skill(skill_id)
+    if not skill:
+        return jsonify({'error': 'Skill not found'}), 404
+
+    skill_path = Path(skill['path'])
+    readme_content = ''
+    readme_file = None
+
+    # 优先 SKILL.md,然后 README.md
+    for filename in ['SKILL.md', 'README.md', 'readme.md', 'README.rst', 'README.txt']:
+        filepath = skill_path / filename
+        if filepath.exists():
+            readme_file = filepath
+            break
+
+    if readme_file and readme_file.exists():
+        try:
+            readme_content = readme_file.read_text(encoding='utf-8')
+        except Exception as e:
+            readme_content = f'读取失败: {e}'
+
+    return jsonify({
+        'content': readme_content,
+        'filename': readme_file.name if readme_file else None,
+        'path': str(readme_file) if readme_file else None
+    })
+
+
+@app.route('/api/project/<int:project_id>/readme')
+def get_project_readme(project_id: int):
+    """获取项目的README内容"""
+    db = get_database()
+    project = db.get_project(project_id)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    project_path = Path(project['path'])
+    readme_content = ''
+    readme_file = None
+
+    for filename in ['README.md', 'README.rst', 'README.txt', 'readme.md']:
+        filepath = project_path / filename
+        if filepath.exists():
+            readme_file = filepath
+            break
+
+    if readme_file and readme_file.exists():
+        try:
+            readme_content = readme_file.read_text(encoding='utf-8')
+        except Exception as e:
+            readme_content = f'读取失败: {e}'
+
+    return jsonify({
+        'content': readme_content,
+        'filename': readme_file.name if readme_file else None,
+        'path': str(readme_file) if readme_file else None
+    })
+
+
+@app.route('/api/projects/check-updates', methods=['POST'])
+def check_updates():
+    """检测所有项目的远程更新状态(轻量,不下载代码)"""
+    from .updater import UpdateChecker
+    checker = UpdateChecker()
+    result = checker.check_projects()
+    return jsonify({'success': True, 'result': result})
+
+
+@app.route('/api/distribute-targets')
+def get_distribute_targets():
+    """获取所有可用的分发目标"""
+    from .targets import list_targets
+    return jsonify(list_targets())
+
+
+@app.route('/api/export', methods=['POST'])
+def export_data():
+    """导出所有技能和项目数据(含元数据,不含文件内容)"""
+    db = get_database()
+    skills = db.get_all_skills()
+    projects = db.get_all_projects()
+
+    # 清理不可序列化的字段
+    for item in skills + projects:
+        item.pop('local_size', None)
+
+    from datetime import datetime
+    return jsonify({
+        'skills': skills,
+        'projects': projects,
+        'exported_at': datetime.now().isoformat(),
+        'version': '0.3.0'
+    })
+
+
+@app.route('/api/import', methods=['POST'])
+def import_data():
+    """导入技能和项目元数据(仅更新category/tags/remark,不创建新记录)"""
+    db = get_database()
+    data = request.get_json()
+
+    skills = data.get('skills', [])
+    projects = data.get('projects', [])
+
+    skill_updated = 0
+    project_updated = 0
+    errors = []
+
+    for skill in skills:
+        try:
+            skill_id = skill.get('id')
+            if not skill_id:
+                continue
+            existing = db.get_skill(skill_id)
+            if not existing:
+                # 尝试按path匹配
+                path = skill.get('path')
+                if path:
+                    existing = db.get_skill_by_path(path)
+            if existing:
+                update_data = {}
+                if skill.get('category'):
+                    update_data['category'] = skill['category']
+                if skill.get('tags'):
+                    update_data['tags'] = skill['tags']
+                if skill.get('remark'):
+                    update_data['remark'] = skill['remark']
+                if update_data:
+                    db.update_skill(existing['id'], **update_data)
+                    skill_updated += 1
+        except Exception as e:
+            errors.append(f"技能 {skill.get('name')}: {e}")
+
+    for project in projects:
+        try:
+            project_id = project.get('id')
+            if not project_id:
+                continue
+            existing = db.get_project(project_id)
+            if not existing:
+                path = project.get('path')
+                if path:
+                    existing = db.get_project_by_path(path)
+            if existing:
+                update_data = {}
+                if project.get('category'):
+                    update_data['category'] = project['category']
+                if project.get('tags'):
+                    update_data['tags'] = project['tags']
+                if project.get('remark'):
+                    update_data['remark'] = project['remark']
+                if update_data:
+                    db.update_project(existing['id'], **update_data)
+                    project_updated += 1
+        except Exception as e:
+            errors.append(f"项目 {project.get('name')}: {e}")
+
+    return jsonify({
+        'success': True,
+        'skills_updated': skill_updated,
+        'projects_updated': project_updated,
+        'errors': errors
+    })
 
 
 def run_server(host: str = '127.0.0.1', port: int = 5000, debug: bool = False):

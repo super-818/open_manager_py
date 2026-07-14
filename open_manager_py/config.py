@@ -131,6 +131,10 @@ class Config:
     def get_db_path(self) -> Path:
         """获取数据库文件路径"""
         return self.data_dir / "manager.db"
+
+    def get_log_dir(self) -> Path:
+        """获取日志目录(用于logger模块)"""
+        return self.log_dir
     
     def get_backup_dir(self) -> Path:
         """获取备份目录"""
