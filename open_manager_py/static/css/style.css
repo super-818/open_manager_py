@@ -715,3 +715,14 @@ body {
 .btn-info:hover {
     background: #138496;
 }
+
+.update-badge {
+    display: inline-block;
+    background: #ff6b6b;
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 600;
+}

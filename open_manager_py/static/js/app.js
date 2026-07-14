@@ -58,6 +58,7 @@ function initButtons() {
     document.getElementById('scanBtn').addEventListener('click', scanDirectories);
     document.getElementById('distributeSkillsBtn').addEventListener('click', distributeSkills);
     document.getElementById('exportPathsBtn').addEventListener('click', exportPaths);
+    document.getElementById('checkUpdatesBtn').addEventListener('click', checkProjectUpdates);
     document.getElementById('updateAllBtn').addEventListener('click', updateAllProjects);
     
     document.getElementById('skillSearch').addEventListener('input', debounce(searchSkills, 300));
@@ -308,7 +309,10 @@ function renderProjects(projects) {
         if (project.version) {
             title += ` <span class="version-tag">v${escapeHtml(project.version)}</span>`;
         }
-        
+        if (project.has_update) {
+            title += ' <span class="update-badge">有更新</span>';
+        }
+
         return `
         <div class="resource-card" data-type="project" data-id="${project.id}" data-path="${escapeHtml(project.path)}">
             <div class="resource-header">
@@ -399,6 +403,31 @@ async function viewReadme(type, id) {
 
 function closeReadmeModal() {
     document.getElementById('readmeModal').classList.remove('show');
+}
+
+async function checkProjectUpdates() {
+    const btn = document.getElementById('checkUpdatesBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '检测中...';
+
+    try {
+        const response = await fetch('/api/projects/check-updates', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success) {
+            showToast(`检测完成：${data.result.has_update} 个有更新`, 'success');
+            await loadProjects();
+        } else {
+            showToast(data.error || '检测失败', 'error');
+        }
+    } catch (error) {
+        showToast('检测失败', 'error');
+        console.error(error);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
 function distributeSkills() {
