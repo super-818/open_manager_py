@@ -47,22 +47,31 @@ class DirectoryScanner:
                         name = item.name
                         md_hash = self.db.calculate_file_hash(skill_md)
                         github_url = self._extract_github_url(skill_md)
+                        version = self._extract_dir_version(item)
+                        last_commit_time = self._extract_last_commit_time(item)
                         
                         if path not in existing_paths:
                             self.db.add_skill(
                                 name=name,
                                 path=path,
                                 md_hash=md_hash,
-                                github_url=github_url
+                                github_url=github_url,
+                                version=version,
+                                last_commit_time=last_commit_time
                             )
                             new_count += 1
                         else:
                             existing_skill = self.db.get_skill_by_path(path)
-                            if existing_skill and existing_skill.get('md_hash') != md_hash:
+                            update_data = {'md_hash': md_hash, 'github_url': github_url, 'version': version, 'last_commit_time': last_commit_time}
+                            need_update = existing_skill and (
+                                existing_skill.get('md_hash') != md_hash
+                                or existing_skill.get('version') != version
+                                or existing_skill.get('last_commit_time') != last_commit_time
+                            )
+                            if need_update:
                                 self.db.update_skill(
                                     existing_skill['id'],
-                                    md_hash=md_hash,
-                                    github_url=github_url
+                                    **update_data
                                 )
                                 update_count += 1
                         
@@ -104,7 +113,8 @@ class DirectoryScanner:
                         name = item.name
                         repo_hash = self._calculate_repo_hash(item)
                         github_url = self._extract_repo_url(item)
-                        version = self._extract_version(item)
+                        version = self._extract_dir_version(item)
+                        last_commit_time = self._extract_last_commit_time(item)
                         
                         if path not in existing_paths:
                             self.db.add_project(
@@ -112,25 +122,24 @@ class DirectoryScanner:
                                 path=path,
                                 repo_hash=repo_hash,
                                 github_url=github_url,
-                                version=version
+                                version=version,
+                                last_commit_time=last_commit_time
                             )
                             new_count += 1
                         else:
                             existing_project = self.db.get_project_by_path(path)
-                            update_data = {'repo_hash': repo_hash, 'github_url': github_url}
-                            if version:
-                                update_data['version'] = version
-                            if existing_project and existing_project.get('repo_hash') != repo_hash:
+                            update_data = {'repo_hash': repo_hash, 'github_url': github_url, 'version': version, 'last_commit_time': last_commit_time}
+                            need_update = existing_project and (
+                                existing_project.get('repo_hash') != repo_hash
+                                or existing_project.get('version') != version
+                                or existing_project.get('last_commit_time') != last_commit_time
+                            )
+                            if need_update:
                                 self.db.update_project(
                                     existing_project['id'],
                                     **update_data
                                 )
                                 update_count += 1
-                            elif version and existing_project.get('version') != version:
-                                self.db.update_project(
-                                    existing_project['id'],
-                                    version=version
-                                )
                         
                         scanned_paths.add(path)
         
@@ -214,13 +223,14 @@ class DirectoryScanner:
         except Exception:
             return None
     
-    def _extract_version(self, repo_dir: Path) -> Optional[str]:
-        """从Git仓库提取版本号（优先使用git tag，然后尝试从文件中提取）"""
+    def _extract_dir_version(self, repo_dir: Path) -> Optional[str]:
+        """从目录提取版本号（优先使用git tag，然后从配置文件提取）。
+        注意：不会把commit hash当版本号，只有形如v1.2.3/1.2.3的tag或配置文件中的版本才返回。"""
         version = None
         
         try:
             result = subprocess.run(
-                ['git', 'describe', '--tags', '--always'],
+                ['git', 'describe', '--tags', '--abbrev=0'],
                 cwd=str(repo_dir),
                 capture_output=True,
                 text=True,
@@ -228,27 +238,14 @@ class DirectoryScanner:
             )
             if result.returncode == 0:
                 tag = result.stdout.strip()
-                if tag.startswith('v'):
-                    tag = tag[1:]
-                return tag
+                if tag and re.match(r'^v?\d+(\.\d+)*', tag):
+                    if tag.startswith('v'):
+                        tag = tag[1:]
+                    return tag
         except Exception:
             pass
         
-        try:
-            result = subprocess.run(
-                ['git', 'rev-parse', '--short', 'HEAD'],
-                cwd=str(repo_dir),
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            if result.returncode == 0:
-                commit_hash = result.stdout.strip()
-                version = f'git-{commit_hash}'
-        except Exception:
-            pass
-        
-        version_files = ['setup.py', 'pyproject.toml', 'package.json', 'VERSION']
+        version_files = ['setup.py', 'pyproject.toml', 'package.json', 'VERSION', 'SKILL.md']
         for filename in version_files:
             filepath = repo_dir / filename
             if filepath.exists():
@@ -263,20 +260,50 @@ class DirectoryScanner:
                             import json
                             try:
                                 data = json.loads(content)
-                                if 'version' in data:
-                                    return data['version']
+                                if 'version' in data and isinstance(data['version'], str):
+                                    return data['version'].strip()
                             except:
                                 pass
                             continue
                         elif filename == 'VERSION':
                             return content.strip()
+                        elif filename == 'SKILL.md':
+                            match = re.search(r'(?:版本|version)\s*[:：]\s*([^\n\r]+)', content, re.IGNORECASE)
+                        else:
+                            match = None
                         
                         if match:
-                            return match.group(1)
+                            ver = match.group(1).strip()
+                            if ver and re.match(r'^\d+(\.\d+)*', ver):
+                                return ver
                 except Exception:
                     pass
         
         return version
+
+    def _extract_last_commit_time(self, repo_dir: Path) -> Optional[str]:
+        """提取最近一次git commit的时间（ISO格式），非git目录返回文件修改时间"""
+        try:
+            result = subprocess.run(
+                ['git', 'log', '-1', '--format=%cI'],
+                cwd=str(repo_dir),
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            if result.returncode == 0:
+                t = result.stdout.strip()
+                if t:
+                    return t
+        except Exception:
+            pass
+        try:
+            import os
+            mtime = repo_dir.stat().st_mtime
+            from datetime import datetime
+            return datetime.fromtimestamp(mtime).isoformat()
+        except Exception:
+            return None
 
 
 _scanner_instance: Optional[DirectoryScanner] = None

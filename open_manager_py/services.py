@@ -10,7 +10,8 @@ from .logger import get_logger
 
 
 def _sort_items(items: List[Dict[str, Any]], sort_by: Optional[str]) -> List[Dict[str, Any]]:
-    """通用排序函数: name / name_desc / size / size_desc / time / time_desc"""
+    """通用排序函数: name / name_desc / size / size_desc / time / time_desc
+    time排序优先使用last_commit_time（最近git提交时间），降级到last_updated/create_time"""
     if not sort_by:
         return items
     reverse = sort_by.endswith('_desc')
@@ -20,7 +21,9 @@ def _sort_items(items: List[Dict[str, Any]], sort_by: Optional[str]) -> List[Dic
     if key == 'size':
         return sorted(items, key=lambda x: x.get('local_size') or 0, reverse=reverse)
     if key == 'time':
-        return sorted(items, key=lambda x: x.get('updated_at') or x.get('created_at') or '', reverse=reverse)
+        def _time_key(x):
+            return x.get('last_commit_time') or x.get('last_updated') or x.get('create_time') or x.get('created_at') or ''
+        return sorted(items, key=_time_key, reverse=reverse)
     return items
 
 

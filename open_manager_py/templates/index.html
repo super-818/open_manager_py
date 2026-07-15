@@ -11,6 +11,7 @@
         <header class="header">
             <h1>开源资源管理器</h1>
             <div class="header-actions">
+                <button id="themeToggle" class="btn btn-icon" title="切换主题">🌙</button>
                 <button id="scanBtn" class="btn btn-primary">扫描目录</button>
                 <button id="exportBtn" class="btn btn-secondary">导出</button>
                 <button id="importBtn" class="btn btn-secondary">导入</button>
@@ -175,7 +176,7 @@
         <div class="modal-content progress-modal">
             <div class="modal-header">
                 <h2 id="progressTitle">更新项目</h2>
-                <button class="close-btn" id="closeProgressBtn">&times;</button>
+                <button class="close-btn" onclick="closeProgressModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="progress-container">
@@ -189,7 +190,7 @@
                 <div class="progress-details" id="progressDetails"></div>
             </div>
             <div class="modal-footer">
-                <button id="closeProgressModalBtn" class="btn btn-secondary" style="display: none;">关闭</button>
+                <button class="btn btn-secondary" onclick="closeProgressModal()" id="closeProgressModalBtn" style="display: none;">关闭</button>
             </div>
         </div>
     </div>

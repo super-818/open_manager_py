@@ -74,6 +74,8 @@ function initButtons() {
     document.getElementById('exportBtn').addEventListener('click', exportData);
     document.getElementById('importBtn').addEventListener('click', openImportModal);
     document.getElementById('confirmImportBtn').addEventListener('click', importData);
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    initTheme();
     
     document.getElementById('skillSearch').addEventListener('input', debounce(searchSkills, 300));
     document.getElementById('skillCategory').addEventListener('change', searchSkills);
@@ -127,7 +129,8 @@ function handleResourceAction(event) {
 function initModal() {
     const editModal = document.getElementById('editModal');
     const distributeModal = document.getElementById('distributeModal');
-    const closeBtns = document.querySelectorAll('.close-btn');
+    const readmeModal = document.getElementById('readmeModal');
+    const importModal = document.getElementById('importModal');
     const cancelBtn = document.getElementById('cancelBtn');
     const saveBtn = document.getElementById('saveBtn');
     const cancelDistributeBtn = document.getElementById('cancelDistributeBtn');
@@ -135,7 +138,6 @@ function initModal() {
     const categorySelect = document.getElementById('editCategorySelect');
     const categoryCustomInput = document.getElementById('editCategoryCustom');
 
-    closeBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     if (saveBtn) saveBtn.addEventListener('click', saveResource);
     if (cancelDistributeBtn) cancelDistributeBtn.addEventListener('click', closeDistributeModal);
@@ -155,17 +157,22 @@ function initModal() {
 
     if (editModal) {
         editModal.addEventListener('click', function(e) {
-            if (e.target === editModal) {
-                closeModal();
-            }
+            if (e.target === editModal) closeModal();
         });
     }
-
     if (distributeModal) {
         distributeModal.addEventListener('click', function(e) {
-            if (e.target === distributeModal) {
-                closeDistributeModal();
-            }
+            if (e.target === distributeModal) closeDistributeModal();
+        });
+    }
+    if (readmeModal) {
+        readmeModal.addEventListener('click', function(e) {
+            if (e.target === readmeModal) closeReadmeModal();
+        });
+    }
+    if (importModal) {
+        importModal.addEventListener('click', function(e) {
+            if (e.target === importModal) closeImportModal();
         });
     }
 }
@@ -288,7 +295,13 @@ function renderSkills(skills) {
         return;
     }
 
-    const cardsHtml = skills.map(skill => `
+    const cardsHtml = skills.map(skill => {
+        let title = escapeHtml(skill.name);
+        if (skill.version) {
+            title += ` <span class="version-tag">v${escapeHtml(skill.version)}</span>`;
+        }
+        const timeStr = skill.last_commit_time || skill.create_time;
+        return `
         <div class="resource-card" data-type="skill" data-id="${skill.id}" data-path="${escapeHtml(skill.path)}">
             <div class="resource-check">
                 <input type="checkbox" class="item-checkbox" data-type="skill" data-id="${skill.id}">
@@ -296,13 +309,14 @@ function renderSkills(skills) {
             <div class="resource-body">
                 <div class="resource-header">
                     <div>
-                        <div class="resource-title">${escapeHtml(skill.name)}</div>
+                        <div class="resource-title">${title}</div>
                         <div class="resource-path">${escapeHtml(skill.path)}</div>
+                        ${timeStr ? `<div class="resource-time">🕐 最近更新: ${formatDate(timeStr)}</div>` : ''}
                     </div>
                 </div>
                 <div class="resource-meta">
                     ${skill.category ? `<span class="meta-tag meta-category" style="background:${getCategoryColor(skill.category)}20;color:${getCategoryColor(skill.category)};border:1px solid ${getCategoryColor(skill.category)}40">${escapeHtml(skill.category)}</span>` : ''}
-                    ${skill.tags ? skill.tags.split(',').map(tag => `<span class="meta-tag">#${escapeHtml(tag.trim())}</span>`).join('') : ''}
+                    ${skill.tags ? (typeof skill.tags === 'string' ? skill.tags.split(',').map(tag => tag.trim()).filter(t => t).map(tag => `<span class="meta-tag">#${escapeHtml(tag)}</span>`).join('') : skill.tags.map(tag => `<span class="meta-tag">#${escapeHtml(tag)}</span>`).join('')) : ''}
                     ${skill.github_url ? `<a href="${escapeHtml(skill.github_url)}" target="_blank" class="meta-tag meta-link">🔗 GitHub</a>` : ''}
                 </div>
                 ${skill.notes ? `<div class="resource-notes">${escapeHtml(skill.notes)}</div>` : ''}
@@ -315,7 +329,7 @@ function renderSkills(skills) {
                 </div>
             </div>
         </div>
-    `).join('');
+    `;}).join('');
 
     container.innerHTML = `
         <div class="batch-bar" id="skillBatchBar">
@@ -353,6 +367,7 @@ function renderProjects(projects) {
         if (project.has_update) {
             title += ' <span class="update-badge">有更新</span>';
         }
+        const timeStr = project.last_commit_time || project.create_time;
 
         return `
         <div class="resource-card" data-type="project" data-id="${project.id}" data-path="${escapeHtml(project.path)}">
@@ -364,12 +379,12 @@ function renderProjects(projects) {
                     <div>
                         <div class="resource-title">${title}</div>
                         <div class="resource-path">${escapeHtml(project.path)}</div>
-                        ${project.create_time ? `<div class="resource-time">克隆时间: ${formatDate(project.create_time)}</div>` : ''}
+                        ${timeStr ? `<div class="resource-time">🕐 最近更新: ${formatDate(timeStr)}</div>` : ''}
                     </div>
                 </div>
                 <div class="resource-meta">
                     ${project.category ? `<span class="meta-tag meta-category" style="background:${getCategoryColor(project.category)}20;color:${getCategoryColor(project.category)};border:1px solid ${getCategoryColor(project.category)}40">${escapeHtml(project.category)}</span>` : ''}
-                    ${project.tags ? project.tags.split(',').map(tag => `<span class="meta-tag">#${escapeHtml(tag.trim())}</span>`).join('') : ''}
+                    ${project.tags ? (typeof project.tags === 'string' ? project.tags.split(',').map(tag => tag.trim()).filter(t => t).map(tag => `<span class="meta-tag">#${escapeHtml(tag)}</span>`).join('') : project.tags.map(tag => `<span class="meta-tag">#${escapeHtml(tag)}</span>`).join('')) : ''}
                     ${project.github_url ? `<a href="${escapeHtml(project.github_url)}" target="_blank" class="meta-tag meta-link">🔗 GitHub</a>` : ''}
                 </div>
                 ${project.notes ? `<div class="resource-notes">${escapeHtml(project.notes)}</div>` : ''}
@@ -491,24 +506,6 @@ async function batchSetCategory(type, ids, category) {
     }
     showToast(`批量分类完成: 成功 ${success} 项, 失败 ${failed} 项`, failed > 0 ? 'error' : 'success');
     if (type === 'skill') await loadSkills(); else await loadProjects();
-}
-
-async function updateResource(type, id) {
-    try {
-        const response = await fetch(`/api/${type}/${id}/update`, { method: 'POST' });
-        const data = await response.json();
-
-        if (data.success) {
-            showToast('更新成功', 'success');
-            await loadSkills();
-            await loadProjects();
-        } else {
-            showToast(data.error || '更新失败', 'error');
-        }
-    } catch (error) {
-        showToast('更新失败', 'error');
-        console.error(error);
-    }
 }
 
 async function viewReadme(type, id) {
@@ -982,16 +979,10 @@ function showToast(message, type = 'success') {
 }
 
 function initProgressModal() {
-    const closeBtn = document.getElementById('closeProgressBtn');
-    const closeModalBtn = document.getElementById('closeProgressModalBtn');
     const progressModal = document.getElementById('progressModal');
-    
-    if (closeBtn) closeBtn.addEventListener('click', closeProgressModal);
-    if (closeModalBtn) closeModalBtn.addEventListener('click', closeProgressModal);
-    
     if (progressModal) {
         progressModal.addEventListener('click', function(e) {
-            if (e.target === progressModal && !isUpdating) {
+            if (e.target === progressModal) {
                 closeProgressModal();
             }
         });
@@ -1018,9 +1009,11 @@ function showProgressModal(title) {
 }
 
 function closeProgressModal() {
-    if (isUpdating) return;
     const progressModal = document.getElementById('progressModal');
     if (progressModal) progressModal.classList.remove('show');
+    if (isUpdating) {
+        showToast('更新将在后台继续，完成后自动刷新列表', 'info');
+    }
 }
 
 function updateProgress(current, total, subtitle) {
@@ -1164,4 +1157,39 @@ async function updateAllProjects() {
     
     showToast(`更新完成！成功: ${updatedCount}, 失败: ${failedCount}`, updatedCount > 0 ? 'success' : 'error');
     await loadProjects();
+}
+
+/**
+ * 初始化主题：读取localStorage，无则跟随系统偏好
+ */
+function initTheme() {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || (prefersDark ? 'dark' : 'light');
+    applyTheme(theme);
+}
+
+/**
+ * 切换主题（明/暗）
+ */
+function toggleTheme() {
+    const isDark = document.body.classList.contains('dark');
+    applyTheme(isDark ? 'light' : 'dark');
+}
+
+/**
+ * 应用主题：切换body的dark class + 持久化 + 更新图标
+ */
+function applyTheme(theme) {
+    const btn = document.getElementById('themeToggle');
+    if (theme === 'dark') {
+        document.body.classList.add('dark');
+        if (btn) btn.textContent = '☀️';
+        if (btn) btn.title = '切换到浅色模式';
+    } else {
+        document.body.classList.remove('dark');
+        if (btn) btn.textContent = '🌙';
+        if (btn) btn.title = '切换到暗黑模式';
+    }
+    localStorage.setItem('theme', theme);
 }

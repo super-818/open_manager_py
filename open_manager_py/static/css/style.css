@@ -894,3 +894,330 @@ body {
     flex: 1;
     min-width: 0;
 }
+
+.btn-icon {
+    background: transparent;
+    color: #475569;
+    padding: 8px 12px;
+    font-size: 18px;
+    border-radius: 8px;
+}
+
+.btn-icon:hover {
+    background: #f0f2f5;
+    transform: scale(1.1);
+}
+
+.version-tag {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.resource-time {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+/* ========== 暗黑模式 ========== */
+body.dark {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #e2e8f0;
+}
+
+body.dark .header {
+    background: #1e293b;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+body.dark .header h1 {
+    background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+body.dark .tabs {
+    background: #1e293b;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+body.dark .tab-btn {
+    color: #94a3b8;
+}
+
+body.dark .tab-btn.active {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: white;
+}
+
+body.dark .tab-btn:hover:not(.active) {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+body.dark .toolbar {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark .search-input,
+body.dark .select-input,
+body.dark .form-input,
+body.dark .form-textarea {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+body.dark .search-input:focus,
+body.dark .select-input:focus,
+body.dark .form-input:focus,
+body.dark .form-textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+body.dark .select-input option {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+body.dark .batch-bar {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+body.dark .resource-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+body.dark .resource-card:hover {
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+    border-color: #6366f1;
+}
+
+body.dark .resource-path {
+    color: #94a3b8;
+}
+
+body.dark .resource-time {
+    color: #64748b;
+}
+
+body.dark .resource-notes {
+    background: #0f172a;
+    color: #94a3b8;
+}
+
+body.dark .meta-tag {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+body.dark .btn-secondary {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+body.dark .btn-secondary:hover {
+    background: #475569;
+    color: #f1f5f9;
+}
+
+body.dark .btn-icon {
+    color: #cbd5e1;
+}
+
+body.dark .btn-icon:hover {
+    background: #334155;
+}
+
+body.dark .stat-card {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+
+body.dark .stats-section h3 {
+    color: #e2e8f0;
+}
+
+body.dark .stat-category-item {
+    background: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+body.dark .stat-category-count {
+    color: #818cf8;
+}
+
+body.dark .stats-loading,
+body.dark .empty-state,
+body.dark .empty-state-hint {
+    color: #64748b;
+}
+
+body.dark .empty-state-icon {
+    filter: grayscale(0.5);
+}
+
+body.dark .modal-content {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+body.dark .modal-header {
+    border-bottom-color: #334155;
+}
+
+body.dark .modal-header h2 {
+    color: #f1f5f9;
+}
+
+body.dark .close-btn {
+    color: #94a3b8;
+}
+
+body.dark .close-btn:hover {
+    background: #334155;
+    color: #f1f5f9;
+}
+
+body.dark .modal-footer {
+    border-top-color: #334155;
+}
+
+body.dark .form-group label {
+    color: #cbd5e1;
+}
+
+body.dark .form-hint {
+    color: #64748b;
+}
+
+body.dark .category-custom-input {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+body.dark .tool-option {
+    background: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+body.dark .tool-option:hover {
+    background: #334155;
+    border-color: #6366f1;
+}
+
+body.dark .tool-option input[type="checkbox"] {
+    accent-color: #6366f1;
+}
+
+body.dark .toast {
+    background: #1e293b;
+    color: #e2e8f0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    border: 1px solid #334155;
+}
+
+body.dark .toast.success { border-left-color: #10b981; }
+body.dark .toast.error { border-left-color: #ef4444; }
+body.dark .toast.info { border-left-color: #3b82f6; }
+
+body.dark .readme-content {
+    background: #0f172a;
+}
+
+body.dark .readme-pre {
+    color: #cbd5e1;
+}
+
+body.dark .markdown-body {
+    color: #cbd5e1;
+}
+
+body.dark .markdown-body h1,
+body.dark .markdown-body h2,
+body.dark .markdown-body h3,
+body.dark .markdown-body h4,
+body.dark .markdown-body h5,
+body.dark .markdown-body h6 {
+    color: #f1f5f9;
+    border-bottom-color: #334155;
+}
+
+body.dark .markdown-body a { color: #818cf8; }
+body.dark .markdown-body code {
+    background: #334155;
+    color: #fbbf24;
+}
+body.dark .markdown-body pre {
+    background: #0f172a;
+    border-color: #334155;
+}
+body.dark .markdown-body blockquote {
+    border-left-color: #6366f1;
+    color: #94a3b8;
+}
+body.dark .markdown-body table th,
+body.dark .markdown-body table td {
+    border-color: #334155;
+}
+body.dark .markdown-body table th {
+    background: #334155;
+}
+
+body.dark .progress-modal .modal-content {
+    background: #1e293b;
+}
+
+body.dark .progress-title {
+    color: #e2e8f0;
+}
+
+body.dark .progress-bar-container {
+    background: #334155;
+}
+
+body.dark .progress-details {
+    background: #0f172a;
+}
+
+body.dark .progress-item {
+    border-bottom-color: #334155;
+    color: #cbd5e1;
+}
+
+body.dark .progress-item.pending { color: #64748b; }
+body.dark .progress-item.updating { color: #818cf8; }
+body.dark .progress-item.success { color: #34d399; }
+body.dark .progress-item.error { color: #f87171; }
+
+body.dark .btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+}
+
+body.dark .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+body.dark .version-tag {
+    background: #6366f1;
+}
+
+body.dark .content {
+    background: #1e293b;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}

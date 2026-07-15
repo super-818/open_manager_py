@@ -36,7 +36,7 @@ class Database:
             self.conn = None
     
     def _init_database(self):
-        """初始化数据库表结构"""
+        """初始化数据库表结构（含迁移逻辑，兼容旧版本数据库）"""
         conn = self._get_connection()
         cursor = conn.cursor()
         
@@ -56,7 +56,9 @@ class Database:
                 security_status TEXT DEFAULT 'unknown',
                 security_report TEXT,
                 is_deleted BOOLEAN DEFAULT 0,
-                create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+                create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                version TEXT,
+                last_commit_time DATETIME
             )
         ''')
         
@@ -79,9 +81,15 @@ class Database:
                 security_report TEXT,
                 is_deleted BOOLEAN DEFAULT 0,
                 create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                version TEXT
+                version TEXT,
+                last_commit_time DATETIME
             )
         ''')
+
+        self._migrate_column(cursor, 'skills', 'version', 'TEXT')
+        self._migrate_column(cursor, 'skills', 'last_commit_time', 'DATETIME')
+        self._migrate_column(cursor, 'projects', 'version', 'TEXT')
+        self._migrate_column(cursor, 'projects', 'last_commit_time', 'DATETIME')
         
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category)')
@@ -91,6 +99,14 @@ class Database:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_projects_path ON projects(path)')
         
         conn.commit()
+
+    @staticmethod
+    def _migrate_column(cursor, table: str, column: str, col_type: str):
+        """如果列不存在则添加（简易迁移）"""
+        cursor.execute(f"PRAGMA table_info({table})")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+        if column not in existing_cols:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
     
     def calculate_file_hash(self, file_path: Path) -> Optional[str]:
         """计算文件的SHA256哈希值"""
@@ -118,7 +134,8 @@ class Database:
     
     def add_skill(self, name: str, path: str, md_hash: Optional[str] = None,
                   github_url: Optional[str] = None, category: Optional[str] = None,
-                  tags: Optional[List[str]] = None, remark: Optional[str] = None) -> int:
+                  tags: Optional[List[str]] = None, remark: Optional[str] = None,
+                  version: Optional[str] = None, last_commit_time: Optional[str] = None) -> int:
         """添加技能 - 保留已有分类、标签、备注等信息"""
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -141,6 +158,12 @@ class Database:
                 if remark is not None:
                     update_fields.append('remark')
                     update_values.append(remark)
+                if version is not None:
+                    update_fields.append('version')
+                    update_values.append(version)
+                if last_commit_time is not None:
+                    update_fields.append('last_commit_time')
+                    update_values.append(last_commit_time)
                 
                 update_values.append(existing['id'])
                 cursor.execute(f'''
@@ -152,10 +175,10 @@ class Database:
             else:
                 cursor.execute('''
                     INSERT INTO skills 
-                    (name, path, md_hash, github_url, category, tags, remark, local_size, last_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (name, path, md_hash, github_url, category, tags, remark, local_size, last_updated, version, last_commit_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (name, path, md_hash, github_url, category, tags_json, remark, 
-                      local_size, datetime.now().isoformat()))
+                      local_size, datetime.now().isoformat(), version, last_commit_time))
                 conn.commit()
                 return cursor.lastrowid
         except sqlite3.Error:
@@ -203,7 +226,7 @@ class Database:
     def update_skill(self, skill_id: int, **kwargs) -> bool:
         """更新技能"""
         allowed_fields = ['name', 'md_hash', 'github_url', 'category', 'tags', 
-                         'remark', 'security_status', 'security_report']
+                         'remark', 'security_status', 'security_report', 'version', 'last_commit_time']
         update_fields = []
         update_values = []
         
@@ -272,7 +295,7 @@ class Database:
     def add_project(self, name: str, path: str, repo_hash: Optional[str] = None,
                    github_url: Optional[str] = None, category: Optional[str] = None,
                    tags: Optional[List[str]] = None, remark: Optional[str] = None,
-                   version: Optional[str] = None) -> int:
+                   version: Optional[str] = None, last_commit_time: Optional[str] = None) -> int:
         """添加项目 - 保留已有分类、标签、备注等信息"""
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -298,6 +321,9 @@ class Database:
                 if version is not None:
                     update_fields.append('version')
                     update_values.append(version)
+                if last_commit_time is not None:
+                    update_fields.append('last_commit_time')
+                    update_values.append(last_commit_time)
                 
                 update_values.append(existing['id'])
                 cursor.execute(f'''
@@ -309,10 +335,10 @@ class Database:
             else:
                 cursor.execute('''
                     INSERT INTO projects 
-                    (name, path, repo_hash, github_url, category, tags, remark, local_size, last_updated, version)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (name, path, repo_hash, github_url, category, tags, remark, local_size, last_updated, version, last_commit_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (name, path, repo_hash, github_url, category, tags_json, remark,
-                      local_size, datetime.now().isoformat(), version))
+                      local_size, datetime.now().isoformat(), version, last_commit_time))
                 conn.commit()
                 return cursor.lastrowid
         except sqlite3.Error:
@@ -360,7 +386,7 @@ class Database:
     def update_project(self, project_id: int, **kwargs) -> bool:
         """更新项目"""
         allowed_fields = ['name', 'repo_hash', 'github_url', 'category', 'tags', 
-                         'remark', 'has_update', 'security_status', 'security_report', 'version']
+                         'remark', 'has_update', 'security_status', 'security_report', 'version', 'last_commit_time']
         update_fields = []
         update_values = []
         
