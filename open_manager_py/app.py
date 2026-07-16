@@ -226,8 +226,43 @@ def get_config_api():
     config = get_config()
     return jsonify({
         'skills_dir': str(config.get_skills_dir()),
-        'github_dir': str(config.get_github_dir())
+        'github_dir': str(config.get_github_dir()),
+        'config_file': str(config.config_file),
+        'data_dir': str(config.data_dir),
+        'version': __version__,
     })
+
+
+@app.route('/api/config', methods=['POST'])
+def update_config_api():
+    """更新配置（目前支持修改skills_dir和github_dir）"""
+    try:
+        data = request.get_json() or {}
+        config = get_config()
+        changed = False
+
+        for key in ('skills_dir', 'github_dir'):
+            if key in data and data[key]:
+                new_path = Path(data[key]).expanduser().resolve()
+                if not new_path.exists():
+                    try:
+                        new_path.mkdir(parents=True, exist_ok=True)
+                    except Exception as e:
+                        return jsonify({'success': False, 'error': f'无法创建目录 {new_path}: {e}'})
+                config.set(key, str(new_path))
+                changed = True
+
+        if changed:
+            config.save_config()
+            get_scanner.cache_clear() if hasattr(get_scanner, 'cache_clear') else None
+
+        return jsonify({
+            'success': True,
+            'skills_dir': str(config.get_skills_dir()),
+            'github_dir': str(config.get_github_dir()),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/api/skill/<int:skill_id>/update', methods=['POST'])

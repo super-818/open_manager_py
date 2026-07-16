@@ -1,0 +1,10 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include open_manager_py/templates *.html
+recursive-include open_manager_py/static *
+recursive-exclude tests *
+recursive-exclude screenshots *
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude .git*

@@ -217,6 +217,56 @@ def export(output):
         click.echo(f'已导出到 {output}')
 
 
+@cli.group()
+def config():
+    """查看和修改配置"""
+    pass
+
+
+@config.command('get')
+@click.argument('key', required=False)
+def config_get(key):
+    """查看配置项（不指定key则显示全部）"""
+    cfg = get_config()
+    if key:
+        if key in ('skills_dir', 'github_dir'):
+            click.echo(str(cfg.get_skills_dir() if key == 'skills_dir' else cfg.get_github_dir()))
+        elif key == 'config_file':
+            click.echo(str(cfg.config_file))
+        elif key == 'data_dir':
+            click.echo(str(cfg.data_dir))
+        elif key == 'db_path':
+            click.echo(str(cfg.get_db_path()))
+        else:
+            click.echo(cfg.get(key, ''))
+    else:
+        click.echo(f'配置文件: {cfg.config_file}')
+        click.echo(f'数据目录: {cfg.data_dir}')
+        click.echo(f'数据库文件: {cfg.get_db_path()}')
+        click.echo(f'技能目录: {cfg.get_skills_dir()}')
+        click.echo(f'GitHub目录: {cfg.get_github_dir()}')
+
+
+@config.command('set')
+@click.argument('key')
+@click.argument('value')
+def config_set(key, value):
+    """设置配置项（skills_dir 或 github_dir）"""
+    cfg = get_config()
+    if key not in ('skills_dir', 'github_dir'):
+        click.echo(f'不支持修改的配置项: {key}（仅支持 skills_dir 和 github_dir）', err=True)
+        return
+    p = Path(value).expanduser()
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        click.echo(f'无法创建目录 {p}: {e}', err=True)
+        return
+    cfg.set(key, str(p.resolve()))
+    click.echo(f'已设置 {key} = {p.resolve()}')
+    click.echo(f'配置已保存到 {cfg.config_file}')
+
+
 @cli.command()
 @click.argument('input_file')
 def import_data(input_file):

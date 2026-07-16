@@ -67,20 +67,22 @@ class Config:
             return Path.home() / ".local" / "share" / "SkillProjectManager" / "data"
     
     def _get_default_skills_dir(self) -> str:
-        """获取默认技能目录"""
-        system = platform.system()
-        if system == "Windows":
-            return "D:\\skills"
-        else:
-            return str(Path.home() / "skills")
-    
+        """获取默认技能目录。
+        优先级: 环境变量 OPEN_MANAGER_SKILLS_DIR > 用户home目录下的skills文件夹
+        """
+        env_dir = os.environ.get("OPEN_MANAGER_SKILLS_DIR")
+        if env_dir:
+            return env_dir
+        return str(Path.home() / "skills")
+
     def _get_default_github_dir(self) -> str:
-        """获取默认GitHub项目目录"""
-        system = platform.system()
-        if system == "Windows":
-            return "D:\\github"
-        else:
-            return str(Path.home() / "github")
+        """获取默认GitHub项目目录。
+        优先级: 环境变量 OPEN_MANAGER_GITHUB_DIR > 用户home目录下的github文件夹
+        """
+        env_dir = os.environ.get("OPEN_MANAGER_GITHUB_DIR")
+        if env_dir:
+            return env_dir
+        return str(Path.home() / "github")
     
     def _ensure_directories(self):
         """确保必要目录存在"""

@@ -75,6 +75,8 @@ function initButtons() {
     document.getElementById('importBtn').addEventListener('click', openImportModal);
     document.getElementById('confirmImportBtn').addEventListener('click', importData);
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
+    document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
     initTheme();
     
     document.getElementById('skillSearch').addEventListener('input', debounce(searchSkills, 300));
@@ -1192,4 +1194,58 @@ function applyTheme(theme) {
         if (btn) btn.title = '切换到暗黑模式';
     }
     localStorage.setItem('theme', theme);
+}
+
+/**
+ * 打开设置模态框，加载当前配置
+ */
+async function openSettingsModal() {
+    try {
+        const res = await fetch('/api/config');
+        const cfg = await res.json();
+        document.getElementById('settingsSkillsDir').value = cfg.skills_dir || '';
+        document.getElementById('settingsGithubDir').value = cfg.github_dir || '';
+        document.getElementById('settingsConfigFile').textContent = cfg.config_file || '';
+        document.getElementById('settingsDataDir').textContent = cfg.data_dir || '';
+    } catch (e) {
+        console.error('加载配置失败:', e);
+    }
+    openModal('settingsModal');
+}
+
+/**
+ * 保存设置
+ */
+async function saveSettings() {
+    const skills_dir = document.getElementById('settingsSkillsDir').value.trim();
+    const github_dir = document.getElementById('settingsGithubDir').value.trim();
+
+    if (!skills_dir || !github_dir) {
+        showToast('两个目录都必须填写', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('saveSettingsBtn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    try {
+        const res = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skills_dir, github_dir })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showToast('设置已保存！建议重新扫描目录', 'success');
+            closeModal('settingsModal');
+        } else {
+            showToast('保存失败: ' + (result.error || '未知错误'), 'error');
+        }
+    } catch (e) {
+        showToast('保存失败: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '保存设置';
+    }
 }
