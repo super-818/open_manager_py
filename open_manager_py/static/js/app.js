@@ -140,7 +140,7 @@ function initModal() {
     const categorySelect = document.getElementById('editCategorySelect');
     const categoryCustomInput = document.getElementById('editCategoryCustom');
 
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeEditModal);
     if (saveBtn) saveBtn.addEventListener('click', saveResource);
     if (cancelDistributeBtn) cancelDistributeBtn.addEventListener('click', closeDistributeModal);
     if (confirmDistributeBtn) confirmDistributeBtn.addEventListener('click', confirmDistribute);
@@ -159,7 +159,7 @@ function initModal() {
 
     if (editModal) {
         editModal.addEventListener('click', function(e) {
-            if (e.target === editModal) closeModal();
+            if (e.target === editModal) closeEditModal();
         });
     }
     if (distributeModal) {
@@ -598,7 +598,7 @@ async function loadDistributeTargets() {
 }
 
 function closeAllModals() {
-    closeModal();
+    closeEditModal();
     closeDistributeModal();
 }
 
@@ -893,7 +893,7 @@ async function saveResource() {
         
         if (response.ok) {
             showToast('保存成功', 'success');
-            closeModal();
+            closeEditModal();
             await loadSkills();
             await loadProjects();
         } else {
@@ -905,12 +905,28 @@ async function saveResource() {
     }
 }
 
-function closeModal() {
+function closeEditModal() {
     document.getElementById('editModal').classList.remove('show');
     document.getElementById('editCategoryCustom').style.display = 'none';
     document.getElementById('editCategoryCustom').value = '';
     currentEditResource = null;
     currentEditType = null;
+}
+
+/**
+ * 通用打开模态框
+ */
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('show');
+}
+
+/**
+ * 通用关闭模态框
+ */
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('show');
 }
 
 async function deleteResource(type, id) {

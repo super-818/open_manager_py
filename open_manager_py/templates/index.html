@@ -80,7 +80,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle">编辑资源</h2>
-                <button class="close-btn">&times;</button>
+                <button class="close-btn" onclick="closeEditModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -113,7 +113,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>分发技能</h2>
-                <button class="close-btn">&times;</button>
+                <button class="close-btn" onclick="closeDistributeModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -229,6 +229,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}?v=0.7.0"></script>
 </body>
 </html>
